@@ -256,6 +256,7 @@ int main() {
   CROW_ROUTE(app, "/api/offers")
       .methods("GET"_method)([](const crow::request &req, crow::response &res) {
         try {
+          // Parse mandatory parameters
           int32_t regionID = std::stoi(req.url_params.get("regionID"));
           int64_t timeRangeStart =
               std::stoll(req.url_params.get("timeRangeStart"));
@@ -269,20 +270,74 @@ int main() {
           uint32_t minFreeKilometerWidth =
               std::stoul(req.url_params.get("minFreeKilometerWidth"));
 
-          // Create response object
-          crow::json::wvalue response;
-          std::vector<crow::json::wvalue> resultOffers;
+          // Parse optional parameters
+          std::optional<uint8_t> minNumberSeats;
+          if (req.url_params.get("minNumberSeats") != nullptr) {
+            minNumberSeats = std::stoi(req.url_params.get("minNumberSeats"));
+          }
 
-          // Filter offers based on mandatory parameters
+          std::optional<uint16_t> minPrice;
+          if (req.url_params.get("minPrice") != nullptr) {
+            minPrice = std::stoi(req.url_params.get("minPrice"));
+          }
+
+          std::optional<uint16_t> maxPrice;
+          if (req.url_params.get("maxPrice") != nullptr) {
+            maxPrice = std::stoi(req.url_params.get("maxPrice"));
+          }
+
+          std::optional<std::string> carType;
+          if (req.url_params.get("carType") != nullptr) {
+            carType = req.url_params.get("carType");
+          }
+
+          std::optional<bool> onlyVollkasko;
+          if (req.url_params.get("onlyVollkasko") != nullptr) {
+            onlyVollkasko = req.url_params.get("onlyVollkasko") == "true";
+          }
+
+          std::optional<uint16_t> minFreeKilometer;
+          if (req.url_params.get("minFreeKilometer") != nullptr) {
+            minFreeKilometer =
+                std::stoi(req.url_params.get("minFreeKilometer"));
+          }
+
+          // Filter offers based on parameters
           std::vector<Offer> filteredOffers;
           {
             std::lock_guard<std::mutex> lock(offers_mutex);
             for (const auto &offer : offers) {
-              if (offer.mostSpecificRegionID == regionID &&
-                  offer.startDate >= timeRangeStart &&
-                  offer.endDate <= timeRangeEnd) {
-                filteredOffers.push_back(offer);
+              // Apply mandatory filters
+              // TODO: filter for subregions also
+              // TODO: numberDays is not considered
+              if (offer.mostSpecificRegionID != regionID ||
+                  offer.startDate <= timeRangeStart ||
+                  offer.endDate >= timeRangeEnd) {
+                continue;
               }
+
+              // Check number of days
+              int64_t daysAvailable =
+                  (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
+              if (daysAvailable < numberDays) {
+                continue;
+              }
+
+              // Apply optional filters
+              if (minNumberSeats && offer.numberSeats < *minNumberSeats)
+                continue;
+              if (minPrice && offer.price < *minPrice)
+                continue;
+              if (maxPrice && offer.price >= *maxPrice)
+                continue;
+              if (carType && offer.carType != *carType)
+                continue;
+              if (onlyVollkasko && !offer.hasVollkasko)
+                continue;
+              if (minFreeKilometer && offer.freeKilometers < *minFreeKilometer)
+                continue;
+
+              filteredOffers.push_back(offer);
             }
           }
 
@@ -305,24 +360,7 @@ int main() {
           size_t startIdx = page * pageSize;
           size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
 
-          // Prepare offers for response
-          for (size_t i = startIdx; i < endIdx; i++) {
-            crow::json::wvalue offerJson;
-            offerJson["ID"] = filteredOffers[i].id;
-            offerJson["data"] = filteredOffers[i].data;
-            resultOffers.push_back(std::move(offerJson));
-          }
-
-          response["offers"] = std::move(resultOffers);
-
-          // Add dummy aggregations (to be implemented)
-          // response["priceRanges"] = std::vector<crow::json::wvalue>();
-          // response["carTypeCounts"] = crow::json::wvalue(
-          //     {{"small", 0}, {"sports", 0}, {"luxury", 0}, {"family", 0}});
-          // response["seatsCount"] = std::vector<crow::json::wvalue>();
-          // response["freeKilometerRange"] = std::vector<crow::json::wvalue>();
-          // response["vollkaskoCount"] =
-          //     crow::json::wvalue({{"trueCount", 0}, {"falseCount", 0}});
+          // Calculate aggregations
           auto priceRanges =
               calculatePriceRanges(filteredOffers, priceRangeWidth);
           auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
@@ -331,7 +369,7 @@ int main() {
               filteredOffers, minFreeKilometerWidth);
           auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
 
-          // Convert aggregations to JSON
+          // Prepare response JSON
           std::vector<crow::json::wvalue> priceRangesJson;
           for (const auto &range : priceRanges) {
             crow::json::wvalue rangeJson;
@@ -367,7 +405,7 @@ int main() {
             resultOffers.push_back(std::move(offerJson));
           }
 
-          // Construct the response exactly matching the OpenAPI spec
+          // Construct final response
           crow::json::wvalue response;
           response["offers"] = std::move(resultOffers);
           response["priceRanges"] = std::move(priceRangesJson);
@@ -384,6 +422,7 @@ int main() {
 
           res.write(response.dump());
           res.end();
+
         } catch (const std::exception &e) {
           res.code = 400;
           res.write("Invalid parameters");
