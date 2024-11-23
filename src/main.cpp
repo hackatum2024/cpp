@@ -358,7 +358,18 @@ int main() {
             freeKmRangesJson.push_back(std::move(rangeJson));
           }
 
-          // Add aggregations to response
+          // Prepare offers for response
+          std::vector<crow::json::wvalue> resultOffers;
+          for (size_t i = startIdx; i < endIdx; i++) {
+            crow::json::wvalue offerJson;
+            offerJson["ID"] = filteredOffers[i].id;
+            offerJson["data"] = filteredOffers[i].data;
+            resultOffers.push_back(std::move(offerJson));
+          }
+
+          // Construct the response exactly matching the OpenAPI spec
+          crow::json::wvalue response;
+          response["offers"] = std::move(resultOffers);
           response["priceRanges"] = std::move(priceRangesJson);
           response["carTypeCounts"] =
               crow::json::wvalue({{"small", carTypeCounts.small},
