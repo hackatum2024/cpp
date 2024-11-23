@@ -1,6 +1,7 @@
 #include "crow_all.h"
 #include <algorithm>
 #include <mutex>
+#include <set>
 #include <string>
 #include <unordered_map>
 #include <vector>
@@ -182,6 +183,7 @@ VollkaskoCount calculateVollkaskoCounts(const std::vector<Offer> &offers) {
 // Global storage
 std::vector<Offer> offers;
 std::mutex offers_mutex;
+std::unordered_map<int32_t, std::set<int32_t>> regionToSubregions;
 
 // Helper functions
 bool isValidCarType(const std::string &type) {
@@ -189,7 +191,52 @@ bool isValidCarType(const std::string &type) {
          type == "family";
 }
 
+void processRegion(const crow::json::rvalue &region,
+                   std::unordered_map<int32_t, std::set<int32_t>> &regions) {
+  int32_t regionId = region["id"].i();
+
+  if (region.has("subregions")) {
+    for (const auto &subregion : region["subregions"]) {
+      int32_t subregionId = subregion["id"].i();
+      regions[regionId].insert(subregionId);
+
+      // Process subregion recursively
+      processRegion(subregion, regions);
+
+      // Add all subregions of the subregion to the current region
+      if (regions.count(subregionId)) {
+        regions[regionId].insert(regions[subregionId].begin(),
+                                 regions[subregionId].end());
+      }
+    }
+  }
+}
+
+void loadRegions() {
+  std::ifstream f("regions.json");
+  if (!f.is_open()) {
+    throw std::runtime_error("Could not open regions.json");
+  }
+
+  std::string content((std::istreambuf_iterator<char>(f)),
+                      std::istreambuf_iterator<char>());
+
+  auto data = crow::json::load(content);
+  if (!data) {
+    throw std::runtime_error("Failed to parse regions.json");
+  }
+
+  processRegion(data, regionToSubregions);
+}
+
 int main() {
+  try {
+    loadRegions();
+  } catch (const std::exception &e) {
+    std::cerr << "Failed to load regions: " << e.what() << std::endl;
+    return 1;
+  }
+
   crow::SimpleApp app;
 
   // POST /api/offers - Create new offers
@@ -306,20 +353,28 @@ int main() {
           std::vector<Offer> filteredOffers;
           {
             std::lock_guard<std::mutex> lock(offers_mutex);
+
+            auto validRegions = regionToSubregions[regionID];
+            validRegions.insert(regionID); // include the region itself
+
             for (const auto &offer : offers) {
+              // Check region
+              if (validRegions.count(offer.mostSpecificRegionID) == 0) {
+                continue;
+              }
+
               // Apply mandatory filters
-              // TODO: filter for subregions also
-              // TODO: numberDays is not considered
               if (offer.mostSpecificRegionID != regionID ||
                   offer.startDate <= timeRangeStart ||
                   offer.endDate >= timeRangeEnd) {
                 continue;
               }
 
-              // Check number of days
+              // TODO: is this correct?
+              // check number of days
               int64_t daysAvailable =
                   (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              if (daysAvailable < numberDays) {
+              if (daysAvailable != numberDays) {
                 continue;
               }
 
