@@ -490,7 +490,7 @@ int main() {
           auto freeKilometerRanges = calculateFreeKilometerRanges(
               filteredOffersExceptFreeKilometers, minFreeKilometerWidth,
               minFreeKilometer);
-          auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
+          auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffersExceptVollkasko.push_back(offer););
 
           cout << "we ball even harder" << endl;
           // Paginate results
