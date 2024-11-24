@@ -53,6 +53,77 @@ struct FreeKilometerRange {
   uint32_t count;
 };
 
+struct FilterParameters {
+  // Mandatory filters
+  int32_t regionID;
+  int64_t timeRangeStart;
+  int64_t timeRangeEnd;
+  uint16_t numberDays;
+
+  // Optional filters
+  std::optional<uint8_t> minNumberSeats;
+  std::optional<uint16_t> minPrice;
+  std::optional<uint16_t> maxPrice;
+  std::optional<std::string> carType;
+  std::optional<bool> onlyVollkasko;
+  std::optional<uint16_t> minFreeKilometer;
+};
+
+bool applyMandatoryFilters(const Offer &offer,
+                           const std::set<int32_t> &validRegions,
+                           int64_t timeRangeStart, int64_t timeRangeEnd) {
+  // Check region
+  if (validRegions.count(offer.mostSpecificRegionID) == 0) {
+    return false;
+  }
+
+  // Check time range
+  if (offer.endDate < timeRangeStart || offer.startDate > timeRangeEnd) {
+    return false;
+  }
+
+  return true;
+}
+
+bool applyOptionalFilters(const Offer &offer, const FilterParameters &filters,
+                          bool excludePrice = false,
+                          bool excludeCarType = false,
+                          bool excludeSeats = false,
+                          bool excludeVollkasko = false,
+                          bool excludeFreeKm = false) {
+  // Apply each optional filter unless excluded
+
+  if (!excludePrice) {
+    if (filters.minPrice && offer.price < *filters.minPrice)
+      return false;
+    if (filters.maxPrice && offer.price >= *filters.maxPrice)
+      return false;
+  }
+
+  if (!excludeCarType) {
+    if (filters.carType && offer.carType != *filters.carType)
+      return false;
+  }
+
+  if (!excludeSeats) {
+    if (filters.minNumberSeats && offer.numberSeats < *filters.minNumberSeats)
+      return false;
+  }
+
+  if (!excludeVollkasko) {
+    if (filters.onlyVollkasko && !offer.hasVollkasko)
+      return false;
+  }
+
+  if (!excludeFreeKm) {
+    if (filters.minFreeKilometer &&
+        offer.freeKilometers < *filters.minFreeKilometer)
+      return false;
+  }
+
+  return true;
+}
+
 // Helper functions for aggregations
 std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
                                              uint32_t priceRangeWidth,
@@ -334,13 +405,40 @@ int main() {
   CROW_ROUTE(app, "/api/offers")
       .methods("GET"_method)([](const crow::request &req) {
         try {
+          // Create FilterParameters from request
+          FilterParameters filters;
 
           // Parse mandatory parameters
-          int32_t regionID = std::stoi(req.url_params.get("regionID"));
-          int64_t timeRangeStart =
+          filters.regionID = std::stoi(req.url_params.get("regionID"));
+          filters.timeRangeStart =
               std::stoll(req.url_params.get("timeRangeStart"));
-          int64_t timeRangeEnd = std::stoll(req.url_params.get("timeRangeEnd"));
-          uint16_t numberDays = std::stoi(req.url_params.get("numberDays"));
+          filters.timeRangeEnd = std::stoll(req.url_params.get("timeRangeEnd"));
+          filters.numberDays = std::stoi(req.url_params.get("numberDays"));
+
+          // Parse optional parameters
+          if (req.url_params.get("minNumberSeats") != nullptr) {
+            filters.minNumberSeats =
+                std::stoi(req.url_params.get("minNumberSeats"));
+          }
+          if (req.url_params.get("minPrice") != nullptr) {
+            filters.minPrice = std::stoi(req.url_params.get("minPrice"));
+          }
+          if (req.url_params.get("maxPrice") != nullptr) {
+            filters.maxPrice = std::stoi(req.url_params.get("maxPrice"));
+          }
+          if (req.url_params.get("carType") != nullptr) {
+            filters.carType = req.url_params.get("carType");
+          }
+          if (req.url_params.get("onlyVollkasko") != nullptr) {
+            filters.onlyVollkasko =
+                req.url_params.get("onlyVollkasko") == "true";
+          }
+          if (req.url_params.get("minFreeKilometer") != nullptr) {
+            filters.minFreeKilometer =
+                std::stoi(req.url_params.get("minFreeKilometer"));
+          }
+
+          // Get other parameters
           std::string sortOrder = req.url_params.get("sortOrder");
           uint32_t page = std::stoul(req.url_params.get("page"));
           uint32_t pageSize = std::stoul(req.url_params.get("pageSize"));
@@ -349,148 +447,101 @@ int main() {
           uint32_t minFreeKilometerWidth =
               std::stoul(req.url_params.get("minFreeKilometerWidth"));
 
-          std::optional<uint16_t> minFreeKilometer;
-          if (req.url_params.get("minFreeKilometer") != nullptr) {
-            minFreeKilometer =
-                std::stoi(req.url_params.get("minFreeKilometer"));
-          }
+          std::vector<Offer> mandatoryFiltered;
+          std::vector<Offer> priceAggregationOffers;
+          std::vector<Offer> carTypeAggregationOffers;
+          std::vector<Offer> seatsAggregationOffers;
+          std::vector<Offer> freeKmAggregationOffers;
+          std::vector<Offer> vollkaskoAggregationOffers;
+          std::vector<Offer> finalFilteredOffers;
 
-          // Parse optional parameters
-          std::optional<uint8_t> minNumberSeats;
-          if (req.url_params.get("minNumberSeats") != nullptr) {
-            minNumberSeats = std::stoi(req.url_params.get("minNumberSeats"));
-          }
+          {
+            std::lock_guard<std::mutex> lock(offers_mutex);
+            auto validRegions = regionToSubregions[filters.regionID];
+            validRegions.insert(filters.regionID);
 
-          std::optional<uint16_t> minPrice;
-          if (req.url_params.get("minPrice") != nullptr) {
-            minPrice = std::stoi(req.url_params.get("minPrice"));
-          }
-
-          std::optional<uint16_t> maxPrice;
-          if (req.url_params.get("maxPrice") != nullptr) {
-            maxPrice = std::stoi(req.url_params.get("maxPrice"));
-          }
-
-          std::optional<std::string> carType;
-          if (req.url_params.get("carType") != nullptr) {
-            carType = req.url_params.get("carType");
-          }
-
-          std::optional<bool> onlyVollkasko;
-          if (req.url_params.get("onlyVollkasko") != nullptr) {
-            onlyVollkasko = req.url_params.get("onlyVollkasko") == "true";
-          }
-
-          // Filter offers based on parameters
-        std::vector<Offer> filteredOffers;
-        std::vector<Offer> filteredOffersExceptPrice;
-        std::vector<Offer> filteredOffersExceptCarType;
-        std::vector<Offer> filteredOffersExceptFreeKilometers;
-        std::vector<Offer> filteredOffersExceptSeatsCount;
-        std::vector<Offer> filteredOffersExceptVollkasko;
-        {
-          std::lock_guard<std::mutex> lock(offers_mutex);
-
-          auto validRegions = regionToSubregions[regionID];
-          validRegions.insert(regionID); // include the region itself
-
-          for (const auto &offer : offers) {
-            // Check region
-            if (validRegions.count(offer.mostSpecificRegionID) == 0) {
-              continue;
+            // First apply mandatory filters
+            for (const auto &offer : offers) {
+              if (applyMandatoryFilters(offer, validRegions,
+                                        filters.timeRangeStart,
+                                        filters.timeRangeEnd)) {
+                mandatoryFiltered.push_back(offer);
+              }
             }
 
-            // Apply mandatory filters
-            // Check if offer overlaps with the requested time range
-            if (offer.endDate < timeRangeStart || offer.startDate > timeRangeEnd) {
-              continue;
-            }
+            // Create filtered sets for each aggregation category
+            for (const auto &offer : mandatoryFiltered) {
+              // Price aggregation (exclude price filter)
+              if (applyOptionalFilters(offer, filters, true, false, false,
+                                       false, false)) {
+                priceAggregationOffers.push_back(offer);
+              }
 
-            // Common filters for all vectors
-            bool passesMinNumberSeats = !(minNumberSeats && offer.numberSeats < *minNumberSeats);
-            bool passesOnlyVollkasko = !(onlyVollkasko && !offer.hasVollkasko);
+              // Car type aggregation (exclude car type filter)
+              if (applyOptionalFilters(offer, filters, false, true, false,
+                                       false, false)) {
+                carTypeAggregationOffers.push_back(offer);
+              }
 
-            // General filter including all criteria
-            if (passesMinNumberSeats && passesOnlyVollkasko &&
-                (!minPrice || offer.price >= *minPrice) &&
-                (!maxPrice || offer.price < *maxPrice) &&
-                (!carType || offer.carType == *carType) &&
-                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-              filteredOffers.push_back(offer);
-            }
+              // Seats aggregation (exclude seats filter)
+              if (applyOptionalFilters(offer, filters, false, false, true,
+                                       false, false)) {
+                seatsAggregationOffers.push_back(offer);
+              }
 
-            // Filter excluding price
-            if (passesMinNumberSeats && passesOnlyVollkasko && 
-                (!carType || offer.carType == *carType) &&
-                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-              filteredOffersExceptPrice.push_back(offer);
-            }
+              // Free kilometers aggregation (exclude free km filter)
+              if (applyOptionalFilters(offer, filters, false, false, false,
+                                       false, true)) {
+                freeKmAggregationOffers.push_back(offer);
+              }
 
-            // Filter excluding carType
-            if (passesMinNumberSeats && passesOnlyVollkasko && 
-                (!minPrice || offer.price >= *minPrice) &&
-                (!maxPrice || offer.price < *maxPrice) &&
-                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-              filteredOffersExceptCarType.push_back(offer);
-            }
+              // Vollkasko aggregation (exclude vollkasko filter)
+              if (applyOptionalFilters(offer, filters, false, false, false,
+                                       true, false)) {
+                vollkaskoAggregationOffers.push_back(offer);
+              }
 
-            // Filter excluding freeKilometers
-            if (passesMinNumberSeats && passesOnlyVollkasko && 
-                (!minPrice || offer.price >= *minPrice) &&
-                (!maxPrice || offer.price < *maxPrice) &&
-                (!carType || offer.carType == *carType)) {
-              filteredOffersExceptFreeKilometers.push_back(offer);
-            }
-
-            // Filter excluding seats count
-            if (passesOnlyVollkasko &&
-                (!minPrice || offer.price >= *minPrice) &&
-                (!maxPrice || offer.price < *maxPrice) &&
-                (!carType || offer.carType == *carType) &&
-                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-              filteredOffersExceptSeatsCount.push_back(offer);
-            }
-
-            // Filter excluding vollkasko
-            if (passesMinNumberSeats &&
-                (!minPrice || offer.price >= *minPrice) &&
-                (!maxPrice || offer.price < *maxPrice) &&
-                (!carType || offer.carType == *carType) &&
-                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-              filteredOffersExceptVollkasko.push_back(offer);
+              // Final filtered offers (apply all filters)
+              if (applyOptionalFilters(offer, filters)) {
+                finalFilteredOffers.push_back(offer);
+              }
             }
           }
-        }
 
-
-
-          // Sort offers
+          // Sort final filtered offers if needed
           if (sortOrder == "price-asc") {
-            std::sort(filteredOffers.begin(), filteredOffers.end(),
+            std::sort(finalFilteredOffers.begin(), finalFilteredOffers.end(),
                       [](const Offer &a, const Offer &b) {
                         return a.price < b.price ||
                                (a.price == b.price && a.id < b.id);
                       });
           } else if (sortOrder == "price-desc") {
-            std::sort(filteredOffers.begin(), filteredOffers.end(),
+            std::sort(finalFilteredOffers.begin(), finalFilteredOffers.end(),
                       [](const Offer &a, const Offer &b) {
                         return a.price > b.price ||
                                (a.price == b.price && a.id < b.id);
                       });
           }
 
-          // Calculate aggregations
-          auto priceRanges = calculatePriceRanges(filteredOffersExceptPrice, priceRangeWidth, minPrice, maxPrice);
-          auto carTypeCounts = calculateCarTypeCounts(filteredOffersExceptCarType);
-          auto seatsCount = calculateSeatsCount(filteredOffersExceptSeatsCount);
-          auto freeKilometerRanges = calculateFreeKilometerRanges(filteredOffersExceptFreeKilometers, minFreeKilometerWidth, minFreeKilometer);
-          auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffersExceptVollkasko);
+          // Calculate aggregations using the appropriate filtered sets
+          auto priceRanges =
+              calculatePriceRanges(priceAggregationOffers, priceRangeWidth,
+                                   filters.minPrice, filters.maxPrice);
+          auto carTypeCounts = calculateCarTypeCounts(carTypeAggregationOffers);
+          auto seatsCount = calculateSeatsCount(seatsAggregationOffers);
+          auto freeKilometerRanges = calculateFreeKilometerRanges(
+              freeKmAggregationOffers, minFreeKilometerWidth,
+              filters.minFreeKilometer);
+          auto vollkaskoCounts =
+              calculateVollkaskoCounts(vollkaskoAggregationOffers);
 
           // Paginate results
           size_t startIdx = page * pageSize;
-          size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
+          size_t endIdx =
+              std::min(startIdx + pageSize, finalFilteredOffers.size());
 
           // Prepare response JSON
+          // Price ranges
           std::vector<crow::json::wvalue> priceRangesJson;
           for (const auto &range : priceRanges) {
             crow::json::wvalue rangeJson;
@@ -500,6 +551,7 @@ int main() {
             priceRangesJson.push_back(std::move(rangeJson));
           }
 
+          // Seats count
           std::vector<crow::json::wvalue> seatsCountJson;
           for (const auto &sc : seatsCount) {
             crow::json::wvalue seatsJson;
@@ -508,6 +560,7 @@ int main() {
             seatsCountJson.push_back(std::move(seatsJson));
           }
 
+          // Free kilometer ranges
           std::vector<crow::json::wvalue> freeKmRangesJson;
           for (const auto &range : freeKilometerRanges) {
             crow::json::wvalue rangeJson;
@@ -517,13 +570,13 @@ int main() {
             freeKmRangesJson.push_back(std::move(rangeJson));
           }
 
-          // Prepare offers for response
+          // Prepare paginated offers for response
           std::vector<crow::json::wvalue> resultOffers;
-          if (startIdx < filteredOffers.size()) {
+          if (startIdx < finalFilteredOffers.size()) {
             for (size_t i = startIdx; i < endIdx; i++) {
               crow::json::wvalue offerJson;
-              offerJson["ID"] = filteredOffers[i].id;
-              offerJson["data"] = filteredOffers[i].data;
+              offerJson["ID"] = finalFilteredOffers[i].id;
+              offerJson["data"] = finalFilteredOffers[i].data;
               resultOffers.push_back(std::move(offerJson));
             }
           }
@@ -544,6 +597,7 @@ int main() {
                                   {"falseCount", vollkaskoCounts.falseCount}});
 
           return crow::response(200, response);
+
         } catch (const std::exception &e) {
           // Create an error response
           crow::json::wvalue error_response({{"status", "error"},
