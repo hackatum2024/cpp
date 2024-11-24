@@ -1,5 +1,6 @@
 #include "crow_all.h"
 #include <algorithm>
+#include <iostream>
 #include <mutex>
 #include <set>
 #include <string>
@@ -295,6 +296,12 @@ int main() {
           offers.insert(offers.end(), newOffers.begin(), newOffers.end());
         }
 
+        std::cout << "now stored offers\n";
+        for (Offer &o : offers) {
+          std::cout << o.id << ", ";
+        }
+        std::cout << "\n";
+
         res.code = 200;
         res.end();
       });
@@ -364,8 +371,7 @@ int main() {
               }
 
               // Apply mandatory filters
-              if (offer.mostSpecificRegionID != regionID ||
-                  offer.startDate <= timeRangeStart ||
+              if (offer.startDate <= timeRangeStart ||
                   offer.endDate >= timeRangeEnd) {
                 continue;
               }
