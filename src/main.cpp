@@ -217,6 +217,9 @@ void processRegion(const crow::json::rvalue &region,
                    std::unordered_map<int32_t, std::set<int32_t>> &regions) {
   int32_t regionId = region["id"].i();
 
+  // Add the region itself to its own subregions set
+  regions[regionId].insert(regionId); // Add this line
+
   if (region.has("subregions")) {
     for (const auto &subregion : region["subregions"]) {
       int32_t subregionId = subregion["id"].i();
@@ -388,7 +391,6 @@ int main() {
             std::lock_guard<std::mutex> lock(offers_mutex);
 
             auto validRegions = regionToSubregions[regionID];
-            validRegions.insert(regionID); // include the region itself
 
             for (const auto &offer : offers) {
               // Check region
