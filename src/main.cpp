@@ -397,31 +397,19 @@ int main() {
               }
 
               // Apply mandatory filters
-              // Convert timestamps to days since epoch using time_t (seconds)
-              // first
-              time_t startTime =
-                  offer.startDate / 1000; // Convert ms to seconds
-              time_t endTime = offer.endDate / 1000;
-
-              // Convert to calendar days using gmtime
-              struct tm *startTm = gmtime(&startTime);
-              struct tm *endTm = gmtime(&endTime);
-
-              // Convert to days since epoch
-              int64_t startDay = startTm->tm_yday + (startTm->tm_year * 365) +
-                                 (startTm->tm_year + 70) / 4;
-              int64_t endDay = endTm->tm_yday + (endTm->tm_year * 365) +
-                               (endTm->tm_year + 70) / 4;
-              int64_t offerDuration = endDay - startDay;
-
-              // Check if offer duration matches exactly numberDays
-              if (offerDuration != numberDays) {
-                continue;
-              }
-
               // Check if offer falls completely within the time range
               if (offer.startDate < timeRangeStart ||
                   offer.endDate > timeRangeEnd) {
+                continue;
+              }
+
+              // Convert timestamps to days since epoch and calculate duration
+              const int64_t MS_PER_DAY = 24 * 60 * 60 * 1000;
+              int64_t startDay = offer.startDate / MS_PER_DAY;
+              int64_t endDay = offer.endDate / MS_PER_DAY;
+              int64_t offerDuration = endDay - startDay;
+
+              if (offerDuration != numberDays) {
                 continue;
               }
 
