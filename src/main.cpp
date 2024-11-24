@@ -60,47 +60,37 @@ std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
                                              optional<uint16_t> maxPrice) {
   if (offers.empty() || priceRangeWidth == 0) {
     return {};
-  } 
-
-  uint16_t minPriceUint = 0;
-  if (!minPrice) {
-    for(const auto &offer : offers) {
-      minPriceUint = min(minPrice.value_or(offer.price), offer.price);
-    }
-  }
-  else{
-    minPriceUint = minPrice.value();
   }
 
-  uint16_t maxPriceUint = 0;
-  if (!maxPrice) {
-    for(const auto &offer : offers) {
-      maxPriceUint = max(maxPrice.value_or(offer.price), offer.price);
-    }
-  }
-  else{
-    maxPriceUint = maxPrice.value();
-  }
-  uint32_t maxPriceBasket = minPriceUint + priceRangeWidth;
-  uint32_t i = 0;
+  vector<Offer> sortedOffers(offers);
+  sort(sortedOffers.begin(), sortedOffers.end(),
+       [](const Offer &a, const Offer &b) { return a.price < b.price; });
+
+  uint16_t minPriceUint = minPrice.value_or(sortedOffers[0].price);
+  uint16_t maxPriceUint = maxPrice.value_or(sortedOffers.back().price);
+
   vector<PriceRange> ranges;
-  while (maxPriceBasket <= maxPriceUint && i < offers.size()) {
+  uint32_t bucket_max = minPriceUint + priceRangeWidth;
+  uint32_t i = 0;
+
+  while (i < sortedOffers.size() && bucket_max <= maxPriceUint) {
     uint32_t count = 0;
-    uint16_t min_in_basket = UINT16_MAX;
-    uint16_t max_in_basket = 0;
-    while (offers[i].price < maxPriceBasket) {
+    uint16_t min_in_bucket = UINT16_MAX;
+    uint16_t max_in_bucket = 0;
+
+    while (i < sortedOffers.size() && sortedOffers[i].price < bucket_max) {
       count++;
-      min_in_basket = min(min_in_basket, offers[i].price);
-      max_in_basket = max(max_in_basket, offers[i].price);
+      min_in_bucket = min(min_in_bucket, sortedOffers[i].price);
+      max_in_bucket = max(max_in_bucket, sortedOffers[i].price);
       i++;
     }
-    if (count == 0) {
-      continue;
+
+    if (count > 0) {
+      ranges.push_back({min_in_bucket, max_in_bucket, count});
     }
-    PriceRange range = {min_in_basket, max_in_basket, count};
-    ranges.push_back(range);
-    maxPriceBasket += priceRangeWidth;
+    bucket_max += priceRangeWidth;
   }
+
   return ranges;
 }
 
@@ -143,36 +133,34 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
                              uint32_t minFreeKilometerWidth,
                              optional<uint16_t> minFreeKilometer) {
   if (offers.empty() || minFreeKilometerWidth == 0) {
-
     return {};
-  }
-
-  uint16_t minFreeKilometerUint = 0;
-  if (!minFreeKilometer) {
-    for(const auto &offer : offers) {
-      minFreeKilometerUint = min(minFreeKilometer.value_or(offer.freeKilometers), offer.freeKilometers);
-    }
-  }
-  else{
-    minFreeKilometerUint = minFreeKilometer.value();
   }
 
   vector<Offer> sortedByFreeKilometers(offers);
   vector<FreeKilometerRange> ranges;
+
+  if (sortedByFreeKilometers.empty()) {
+    return ranges;
+  }
+
   // sort the offers by freeKilometers
   sort(sortedByFreeKilometers.begin(), sortedByFreeKilometers.end(),
        [](const Offer &a, const Offer &b) {
          return a.freeKilometers < b.freeKilometers;
        });
 
+  uint16_t minFreeKilometerUint =
+      minFreeKilometer.value_or(sortedByFreeKilometers[0].freeKilometers);
   uint32_t bucket_max = minFreeKilometerUint + minFreeKilometerWidth;
-  Offer start = sortedByFreeKilometers[0];
   uint32_t i = 0;
-  while (i < sortedByFreeKilometers.size() && sortedByFreeKilometers[i].freeKilometers < bucket_max) { 
+
+  while (i < sortedByFreeKilometers.size()) {
     uint32_t count = 0;
     uint16_t max_in_bucket = 0;
     uint16_t min_in_bucket = UINT16_MAX;
-    while (i < sortedByFreeKilometers.size() && sortedByFreeKilometers[i].freeKilometers < bucket_max) {
+
+    while (i < sortedByFreeKilometers.size() &&
+           sortedByFreeKilometers[i].freeKilometers < bucket_max) {
       count++;
       max_in_bucket =
           max(max_in_bucket, sortedByFreeKilometers[i].freeKilometers);
@@ -180,14 +168,14 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
           min(min_in_bucket, sortedByFreeKilometers[i].freeKilometers);
       i++;
     }
-    bucket_max += minFreeKilometerWidth;
 
-    if (count == 0) {
-      continue;
+    if (count > 0) {
+      ranges.push_back({min_in_bucket, max_in_bucket, count});
     }
-    FreeKilometerRange range = {min_in_bucket, max_in_bucket, count};
-    ranges.push_back(range);
+    bucket_max += minFreeKilometerWidth;
   }
+
+  return ranges;
 }
 
 VollkaskoCount calculateVollkaskoCounts(const std::vector<Offer> &offers) {
@@ -447,8 +435,8 @@ int main() {
           size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
 
           // Calculate aggregations
-          auto priceRanges = calculatePriceRanges(filteredOffers, priceRangeWidth,
-                                        minPrice, maxPrice);
+          auto priceRanges = calculatePriceRanges(
+              filteredOffers, priceRangeWidth, minPrice, maxPrice);
           cout << "baller" << endl;
           auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
           auto seatsCount = calculateSeatsCount(filteredOffers);
@@ -487,11 +475,13 @@ int main() {
 
           // Prepare offers for response
           std::vector<crow::json::wvalue> resultOffers;
-          for (size_t i = startIdx; i < endIdx; i++) {
-            crow::json::wvalue offerJson;
-            offerJson["ID"] = filteredOffers[i].id;
-            offerJson["data"] = filteredOffers[i].data;
-            resultOffers.push_back(std::move(offerJson));
+          if (startIdx < filteredOffers.size()) {
+            for (size_t i = startIdx; i < endIdx; i++) {
+              crow::json::wvalue offerJson;
+              offerJson["ID"] = filteredOffers[i].id;
+              offerJson["data"] = filteredOffers[i].data;
+              resultOffers.push_back(std::move(offerJson));
+            }
           }
 
           // Construct final response
