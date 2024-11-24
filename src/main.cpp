@@ -382,85 +382,85 @@ int main() {
           }
 
           // Filter offers based on parameters
-          std::vector<Offer> filteredOffers;
-          std::vector<Offer> filteredOffersExceptPrice;
-          std::vector<Offer> filteredOffersExceptCarType;
-          std::vector<Offer> filteredOffersExceptFreeKilometers;
-          std::vector<Offer> filteredOffersExceptSeatsCount;
-          std::vector<Offer> filteredOffersExceptVollkasko;
-          {
-            std::lock_guard<std::mutex> lock(offers_mutex);
+        std::vector<Offer> filteredOffers;
+        std::vector<Offer> filteredOffersExceptPrice;
+        std::vector<Offer> filteredOffersExceptCarType;
+        std::vector<Offer> filteredOffersExceptFreeKilometers;
+        std::vector<Offer> filteredOffersExceptSeatsCount;
+        std::vector<Offer> filteredOffersExceptVollkasko;
+        {
+          std::lock_guard<std::mutex> lock(offers_mutex);
 
-            auto validRegions = regionToSubregions[regionID];
-            validRegions.insert(regionID); // include the region itself
+          auto validRegions = regionToSubregions[regionID];
+          validRegions.insert(regionID); // include the region itself
 
-            for (const auto &offer : offers) {
-              // Check region
-              if (validRegions.count(offer.mostSpecificRegionID) == 0) {
-                continue;
-              }
+          for (const auto &offer : offers) {
+            // Check region
+            if (validRegions.count(offer.mostSpecificRegionID) == 0) {
+              continue;
+            }
 
-              // Apply mandatory filters
-              // Check if offer overlaps with the requested time range
-              if (offer.endDate < timeRangeStart || offer.startDate > timeRangeEnd) {
-                continue;
-              }
+            // Apply mandatory filters
+            // Check if offer overlaps with the requested time range
+            if (offer.endDate < timeRangeStart || offer.startDate > timeRangeEnd) {
+              continue;
+            }
 
-              // Common filters for all vectors
-              bool passesMinNumberSeats = !(minNumberSeats && offer.numberSeats < *minNumberSeats);
-              bool passesOnlyVollkasko = !(onlyVollkasko && !offer.hasVollkasko);
+            // Common filters for all vectors
+            bool passesMinNumberSeats = !(minNumberSeats && offer.numberSeats < *minNumberSeats);
+            bool passesOnlyVollkasko = !(onlyVollkasko && !offer.hasVollkasko);
 
-              // General filter including all criteria
-              if (passesMinNumberSeats && passesOnlyVollkasko &&
-                  (!minPrice || offer.price >= *minPrice) &&
-                  (!maxPrice || offer.price < *maxPrice) &&
-                  (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-                filteredOffers.push_back(offer);
-              }
+            // General filter including all criteria
+            if (passesMinNumberSeats && passesOnlyVollkasko &&
+                (!minPrice || offer.price >= *minPrice) &&
+                (!maxPrice || offer.price < *maxPrice) &&
+                (!carType || offer.carType == *carType) &&
+                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+              filteredOffers.push_back(offer);
+            }
 
-              // Filter excluding price
-              if (passesMinNumberSeats && passesOnlyVollkasko && 
-                  (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-                filteredOffersExceptPrice.push_back(offer);
-              }
+            // Filter excluding price
+            if (passesMinNumberSeats && passesOnlyVollkasko && 
+                (!carType || offer.carType == *carType) &&
+                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+              filteredOffersExceptPrice.push_back(offer);
+            }
 
-              // Filter excluding carType
-              if (passesMinNumberSeats && passesOnlyVollkasko && 
-                  (!minPrice || offer.price >= *minPrice) &&
-                  (!maxPrice || offer.price < *maxPrice) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-                filteredOffersExceptCarType.push_back(offer);
-              }
+            // Filter excluding carType
+            if (passesMinNumberSeats && passesOnlyVollkasko && 
+                (!minPrice || offer.price >= *minPrice) &&
+                (!maxPrice || offer.price < *maxPrice) &&
+                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+              filteredOffersExceptCarType.push_back(offer);
+            }
 
-              // Filter excluding freeKilometers
-              if (passesMinNumberSeats && passesOnlyVollkasko && 
-                  (!minPrice || offer.price >= *minPrice) &&
-                  (!maxPrice || offer.price < *maxPrice) &&
-                  (!carType || offer.carType == *carType)) {
-                filteredOffersExceptFreeKilometers.push_back(offer);
-              }
+            // Filter excluding freeKilometers
+            if (passesMinNumberSeats && passesOnlyVollkasko && 
+                (!minPrice || offer.price >= *minPrice) &&
+                (!maxPrice || offer.price < *maxPrice) &&
+                (!carType || offer.carType == *carType)) {
+              filteredOffersExceptFreeKilometers.push_back(offer);
+            }
 
-              // Filter excluding seats count
-              if (passesOnlyVollkasko &&
-                  (!minPrice || offer.price >= *minPrice) &&
-                  (!maxPrice || offer.price < *maxPrice) &&
-                  (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-                filteredOffersExceptSeatsCount.push_back(offer);
-              }
+            // Filter excluding seats count
+            if (passesOnlyVollkasko &&
+                (!minPrice || offer.price >= *minPrice) &&
+                (!maxPrice || offer.price < *maxPrice) &&
+                (!carType || offer.carType == *carType) &&
+                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+              filteredOffersExceptSeatsCount.push_back(offer);
+            }
 
-              // Filter excluding vollkasko
-              if (passesMinNumberSeats &&
-                  (!minPrice || offer.price >= *minPrice) &&
-                  (!maxPrice || offer.price < *maxPrice) &&
-                  (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
-                filteredOffersExceptVollkasko.push_back(offer);
-              }
+            // Filter excluding vollkasko
+            if (passesMinNumberSeats &&
+                (!minPrice || offer.price >= *minPrice) &&
+                (!maxPrice || offer.price < *maxPrice) &&
+                (!carType || offer.carType == *carType) &&
+                (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+              filteredOffersExceptVollkasko.push_back(offer);
             }
           }
+        }
 
 
 
@@ -490,7 +490,7 @@ int main() {
           auto freeKilometerRanges = calculateFreeKilometerRanges(
               filteredOffersExceptFreeKilometers, minFreeKilometerWidth,
               minFreeKilometer);
-          auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffersExceptVollkasko.push_back(offer););
+          auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffersExceptVollkasko);
 
           cout << "we ball even harder" << endl;
           // Paginate results
@@ -498,7 +498,7 @@ int main() {
           size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
 
           // Prepare response JSON
-          std::vector<crow::json::value> priceRangesJson;
+          std::vector<crow::json::wvalue> priceRangesJson;
           for (const auto &range : priceRanges) {
             crow::json::wvalue rangeJson;
             rangeJson["start"] = range.start;
