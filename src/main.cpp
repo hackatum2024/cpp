@@ -397,17 +397,23 @@ int main() {
               }
 
               // Apply mandatory filters
-              // Check if offer duration matches exactly numberDays
-              int64_t offerDuration =
-                  (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              if (offerDuration <= numberDays) {
-                continue;
-              }
-
-              // Check if offer falls completely within the time range
+              // First check if offer falls completely within the time range
               // (no undershoot/overshoot allowed)
               if (offer.startDate < timeRangeStart ||
                   offer.endDate > timeRangeEnd) {
+                continue;
+              }
+
+              // Calculate the duration in days
+              // Add (24*60*60*1000 - 1) before dividing to round up partial
+              // days This handles cases where timestamps aren't exactly at
+              // midnight
+              int64_t msPerDay = 24 * 60 * 60 * 1000;
+              int64_t offerDuration =
+                  (offer.endDate - offer.startDate + (msPerDay - 1)) / msPerDay;
+
+              // Check if duration matches exactly numberDays
+              if (offerDuration != numberDays) {
                 continue;
               }
 
