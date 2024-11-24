@@ -69,6 +69,9 @@ std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
   uint16_t minPriceUint = minPrice.value_or(sortedOffers[0].price);
   uint16_t maxPriceUint = maxPrice.value_or(sortedOffers.back().price);
 
+  //round to multiple of priceRangeWidth
+  minPriceUint = minPriceUint - minPriceUint % priceRangeWidth;
+
   vector<PriceRange> ranges;
   uint32_t bucket_max = minPriceUint + priceRangeWidth;
   uint32_t i = 0;
@@ -151,6 +154,10 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
 
   uint16_t minFreeKilometerUint =
       minFreeKilometer.value_or(sortedByFreeKilometers[0].freeKilometers);
+
+  //round to multiple of minFreeKilometerWidth
+  minFreeKilometerUint = minFreeKilometerUint - minFreeKilometerUint % minFreeKilometerWidth;
+  
   uint32_t bucket_max = minFreeKilometerUint + minFreeKilometerWidth;
   uint32_t i = 0;
 
