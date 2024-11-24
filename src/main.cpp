@@ -400,7 +400,7 @@ int main() {
               // Check if offer duration matches exactly numberDays
               int64_t offerDuration =
                   (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              if (offerDuration != numberDays) {
+              if (offerDuration < numberDays) {
                 continue;
               }
 
