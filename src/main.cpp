@@ -393,15 +393,25 @@ int main() {
               }
 
               // Apply mandatory filters
-              if (offer.startDate < timeRangeStart ||
-                  offer.endDate > timeRangeEnd) {
+              // Check if offer overlaps with the requested time range
+              if (offer.endDate < timeRangeStart ||
+                  offer.startDate > timeRangeEnd) {
                 continue;
               }
-              // TODO: is this correct?
-              // check number of days
-              int64_t daysAvailable =
-                  (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              if (daysAvailable != numberDays) {
+
+              // Calculate how many consecutive periods of numberDays exist
+              // within the valid range
+              int64_t validRangeStart =
+                  std::max(offer.startDate, timeRangeStart);
+              int64_t validRangeEnd = std::min(offer.endDate, timeRangeEnd);
+
+              // Convert numberDays to milliseconds
+              int64_t requiredDurationMs =
+                  static_cast<int64_t>(numberDays) * 24 * 60 * 60 * 1000;
+
+              // Check if the valid range is long enough to accommodate the
+              // requested rental duration
+              if ((validRangeEnd - validRangeStart) < requiredDurationMs) {
                 continue;
               }
 
