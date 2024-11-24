@@ -180,12 +180,13 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
           min(min_in_bucket, sortedByFreeKilometers[i].freeKilometers);
       i++;
     }
+    bucket_max += minFreeKilometerWidth;
+
     if (count == 0) {
       continue;
     }
     FreeKilometerRange range = {min_in_bucket, max_in_bucket, count};
     ranges.push_back(range);
-    bucket_max += minFreeKilometerWidth;
   }
 }
 
