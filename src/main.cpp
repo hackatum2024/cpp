@@ -69,7 +69,7 @@ std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
   uint16_t minPriceUint = minPrice.value_or(sortedOffers[0].price);
   uint16_t maxPriceUint = maxPrice.value_or(sortedOffers.back().price);
 
-  //round down to multiple of priceRangeWidth
+  // round down to multiple of priceRangeWidth
   minPriceUint = minPriceUint - minPriceUint % priceRangeWidth;
   maxPriceUint = maxPriceUint + maxPriceUint % priceRangeWidth;
 
@@ -140,48 +140,31 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
     return {};
   }
 
-  vector<Offer> sortedByFreeKilometers(offers);
-  vector<FreeKilometerRange> ranges;
+  // Create map to count offers in each bucket
+  std::map<uint16_t, uint32_t> bucketCounts;
 
-  if (sortedByFreeKilometers.empty()) {
-    return ranges;
+  // Calculate bucket start for each offer and count
+  for (const auto &offer : offers) {
+    // Skip offers below minFreeKilometer if specified
+    if (minFreeKilometer && offer.freeKilometers < *minFreeKilometer) {
+      continue;
+    }
+
+    // Calculate bucket start by rounding down to nearest multiple of width
+    uint16_t bucketStart =
+        (offer.freeKilometers / minFreeKilometerWidth) * minFreeKilometerWidth;
+    bucketCounts[bucketStart]++;
   }
 
-  // sort the offers by freeKilometers
-  sort(sortedByFreeKilometers.begin(), sortedByFreeKilometers.end(),
-       [](const Offer &a, const Offer &b) {
-         return a.freeKilometers < b.freeKilometers;
-       });
-
-  uint16_t minFreeKilometerUint =
-      minFreeKilometer.value_or(sortedByFreeKilometers[0].freeKilometers);
-
-  //round to multiple of minFreeKilometerWidth
-  minFreeKilometerUint = minFreeKilometerUint - minFreeKilometerUint % minFreeKilometerWidth;
-  maxFreeKilometerUint = maxFreeKilometerUint + maxFreeKilometerUint % minFreeKilometerWidth;
-  
-  uint32_t bucket_max = minFreeKilometerUint + minFreeKilometerWidth;
-  uint32_t i = 0;
-
-  while (i < sortedByFreeKilometers.size()) {
-    uint32_t count = 0;
-    uint16_t max_in_bucket = 0;
-    uint16_t min_in_bucket = UINT16_MAX;
-
-    while (i < sortedByFreeKilometers.size() &&
-           sortedByFreeKilometers[i].freeKilometers < bucket_max) {
-      count++;
-      max_in_bucket =
-          max(max_in_bucket, sortedByFreeKilometers[i].freeKilometers);
-      min_in_bucket =
-          min(min_in_bucket, sortedByFreeKilometers[i].freeKilometers);
-      i++;
-    }
-
-    if (count > 0) {
-      ranges.push_back({min_in_bucket, max_in_bucket, count});
-    }
-    bucket_max += minFreeKilometerWidth;
+  // Convert buckets to ranges
+  std::vector<FreeKilometerRange> ranges;
+  for (const auto &[bucketStart, count] : bucketCounts) {
+    uint16_t bucketEnd = bucketStart + minFreeKilometerWidth;
+    ranges.push_back({
+        bucketStart, // Start of range
+        bucketEnd,   // End of range
+        count        // Number of offers in this range
+    });
   }
 
   return ranges;
