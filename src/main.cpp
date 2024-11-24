@@ -371,32 +371,33 @@ int main() {
               }
 
               // Apply mandatory filters
-              if (offer.startDate <= timeRangeStart ||
-                  offer.endDate >= timeRangeEnd) {
-                continue;
-              }
+              // if (offer.startDate <= timeRangeStart ||
+              //     offer.endDate >= timeRangeEnd) {
+              //   continue;
+              // }
 
               // TODO: is this correct?
               // check number of days
-              int64_t daysAvailable =
-                  (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              if (daysAvailable != numberDays) {
-                continue;
-              }
+              // int64_t daysAvailable =
+              //     (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
+              // if (daysAvailable != numberDays) {
+              //   continue;
+              // }
 
               // Apply optional filters
-              if (minNumberSeats && offer.numberSeats < *minNumberSeats)
-                continue;
-              if (minPrice && offer.price < *minPrice)
-                continue;
-              if (maxPrice && offer.price >= *maxPrice)
-                continue;
-              if (carType && offer.carType != *carType)
-                continue;
-              if (onlyVollkasko && !offer.hasVollkasko)
-                continue;
-              if (minFreeKilometer && offer.freeKilometers < *minFreeKilometer)
-                continue;
+              // if (minNumberSeats && offer.numberSeats < *minNumberSeats)
+              //   continue;
+              // if (minPrice && offer.price < *minPrice)
+              //   continue;
+              // if (maxPrice && offer.price >= *maxPrice)
+              //   continue;
+              // if (carType && offer.carType != *carType)
+              //   continue;
+              // if (onlyVollkasko && !offer.hasVollkasko)
+              //   continue;
+              // if (minFreeKilometer && offer.freeKilometers <
+              // *minFreeKilometer)
+              //   continue;
 
               filteredOffers.push_back(offer);
             }
