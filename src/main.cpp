@@ -397,23 +397,22 @@ int main() {
               }
 
               // Apply mandatory filters
-              // Convert timestamps to time_t (seconds since epoch)
+              // Convert timestamps to days since epoch using time_t (seconds)
+              // first
               time_t startTime =
-                  offer.startDate / 1000; // Convert from ms to seconds
+                  offer.startDate / 1000; // Convert ms to seconds
               time_t endTime = offer.endDate / 1000;
 
-              // Convert to calendar days using localtime/gmtime
-              struct tm *startTm =
-                  gmtime(&startTime); // or localtime depending on requirements
+              // Convert to calendar days using gmtime
+              struct tm *startTm = gmtime(&startTime);
               struct tm *endTm = gmtime(&endTime);
 
-              // Get day numbers
-              int startDayNum =
-                  startTm->tm_yday +
-                  (startTm->tm_year *
-                   365); // Simplified, might need leap year handling
-              int endDayNum = endTm->tm_yday + (endTm->tm_year * 365);
-              int64_t offerDuration = endDayNum - startDayNum;
+              // Convert to days since epoch
+              int64_t startDay = startTm->tm_yday + (startTm->tm_year * 365) +
+                                 (startTm->tm_year + 70) / 4;
+              int64_t endDay = endTm->tm_yday + (endTm->tm_year * 365) +
+                               (endTm->tm_year + 70) / 4;
+              int64_t offerDuration = endDay - startDay;
 
               // Check if offer duration matches exactly numberDays
               if (offerDuration != numberDays) {
