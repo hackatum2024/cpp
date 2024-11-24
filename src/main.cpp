@@ -398,11 +398,7 @@ int main() {
 
               // Apply mandatory filters
               // Check if offer duration matches exactly numberDays
-              int64_t offerDuration =
-                  (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              if (offerDuration < numberDays) {
-                continue;
-              }
+             
 
               // Check if offer falls completely within the time range
               // (no undershoot/overshoot allowed)
