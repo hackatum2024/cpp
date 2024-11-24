@@ -8,8 +8,7 @@
 #include <vector>
 
 // Data structures
-struct Offer
-{
+struct Offer {
   std::string id;
   std::string data;
   int32_t mostSpecificRegionID;
@@ -22,35 +21,30 @@ struct Offer
   uint16_t freeKilometers;
 };
 
-struct PriceRange
-{
+struct PriceRange {
   uint16_t start;
   uint16_t end;
   uint32_t count;
 };
 
-struct CarTypeCount
-{
+struct CarTypeCount {
   uint32_t small;
   uint32_t sports;
   uint32_t luxury;
   uint32_t family;
 };
 
-struct VollkaskoCount
-{
+struct VollkaskoCount {
   uint32_t trueCount;
   uint32_t falseCount;
 };
 
-struct SeatsCount
-{
+struct SeatsCount {
   uint8_t numberSeats;
   uint32_t count;
 };
 
-struct FreeKilometerRange
-{
+struct FreeKilometerRange {
   uint16_t start;
   uint16_t end;
   uint32_t count;
@@ -58,30 +52,27 @@ struct FreeKilometerRange
 
 // Helper functions for aggregations
 std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
-                                             uint32_t priceRangeWidth, uint32_t minPrice, uint32_t maxPrice)
-{
-  if (offers.empty() || priceRangeWidth == 0)
-  {
+                                             uint32_t priceRangeWidth,
+                                             uint32_t minPrice,
+                                             uint32_t maxPrice) {
+  if (offers.empty() || priceRangeWidth == 0) {
     return {[]};
   }
 
   uint32_t maxPriceBasket = minPrice + priceRangeWidth;
   uint32_t i = 0;
   vector<PriceRange> ranges;
-  while (maxPriceBasket <= maxPrice)
-  {
+  while (maxPriceBasket <= maxPrice) {
     uint32_t count = 0;
     uint32_t min_in_basket = INT_MAX;
     uint32_t max_in_basket = 0;
-    while (offers[i].price < maxPriceBasket)
-    {
+    while (offers[i].price < maxPriceBasket) {
       count++;
       min_in_basket = min(min_in_basket, offers[i].price);
       max_in_basket = max(max_in_basket, offers[i].price);
       i++;
     }
-    if (count == 0)
-    {
+    if (count == 0) {
       continue;
     }
     PriceRange range = {min_in_basket, max_in_basket, count};
@@ -91,12 +82,10 @@ std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
   return ranges;
 }
 
-CarTypeCount calculateCarTypeCounts(const std::vector<Offer> &offers)
-{
+CarTypeCount calculateCarTypeCounts(const std::vector<Offer> &offers) {
   CarTypeCount counts = {0, 0, 0, 0};
 
-  for (const auto &offer : offers)
-  {
+  for (const auto &offer : offers) {
     if (offer.carType == "small")
       counts.small++;
     else if (offer.carType == "sports")
@@ -110,20 +99,17 @@ CarTypeCount calculateCarTypeCounts(const std::vector<Offer> &offers)
   return counts;
 }
 
-std::vector<SeatsCount> calculateSeatsCount(const std::vector<Offer> &offers)
-{
+std::vector<SeatsCount> calculateSeatsCount(const std::vector<Offer> &offers) {
   std::map<uint8_t, uint32_t> seatCounts;
 
   // Count offers for each seat number
-  for (const auto &offer : offers)
-  {
+  for (const auto &offer : offers) {
     seatCounts[offer.numberSeats]++;
   }
 
   // Convert to vector of SeatsCount
   std::vector<SeatsCount> result;
-  for (const auto &[seats, count] : seatCounts)
-  {
+  for (const auto &[seats, count] : seatCounts) {
     result.push_back({seats, count});
   }
 
@@ -132,34 +118,31 @@ std::vector<SeatsCount> calculateSeatsCount(const std::vector<Offer> &offers)
 
 std::vector<FreeKilometerRange>
 calculateFreeKilometerRanges(const std::vector<Offer> offers,
-                             uint32_t minFreeKilometerWidth, uint32_t minFreeKilometer)
-{
-  if (offers.empty() || minFreeKilometerWidth == 0)
-  {
+                             uint32_t minFreeKilometerWidth,
+                             uint32_t minFreeKilometer) {
+  if (offers.empty() || minFreeKilometerWidth == 0) {
     return {};
   }
 
   vector<FreeKilometerRange> ranges;
   // sort the offers by freeKilometers
-  sort(offers.begin(), offers.end(), [](const Offer &a, const Offer &b)
-       { return a.freeKilometers < b.freeKilometers; });
+  sort(offers.begin(), offers.end(), [](const Offer &a, const Offer &b) {
+    return a.freeKilometers < b.freeKilometers;
+  });
   uint32_t bucket_max = minFreeKilometer + minFreeKilometerWidth;
   Offer start = offers[0];
   uint32_t i = 0;
-  while (i < offers.size())
-  {
+  while (i < offers.size()) {
     uint32_t count = 0;
     uint32_t max_in_bucket = 0;
     uint32_t min_in_bucket = INT_MAX;
-    while (offers[i].freeKilometers < bucket_max)
-    {
+    while (offers[i].freeKilometers < bucket_max) {
       count++;
       max_in_bucket = max(max_in_bucket, offers[i].freeKilometers);
       min_in_bucket = min(min_in_bucket, offers[i].freeKilometers);
       i++;
     }
-    if (count == 0)
-    {
+    if (count == 0) {
       continue;
     }
     FreeKilometerRange range = {min_in_bucket, max_in_bucket, count};
@@ -167,18 +150,13 @@ calculateFreeKilometerRanges(const std::vector<Offer> offers,
     bucket_max += minFreeKilometerWidth;
   }
 
-  VollkaskoCount calculateVollkaskoCounts(const std::vector<Offer> &offers)
-  {
+  VollkaskoCount calculateVollkaskoCounts(const std::vector<Offer> &offers) {
     VollkaskoCount counts = {0, 0};
 
-    for (const auto &offer : offers)
-    {
-      if (offer.hasVollkasko)
-      {
+    for (const auto &offer : offers) {
+      if (offer.hasVollkasko) {
         counts.trueCount++;
-      }
-      else
-      {
+      } else {
         counts.falseCount++;
       }
     }
@@ -192,21 +170,17 @@ calculateFreeKilometerRanges(const std::vector<Offer> offers,
   std::unordered_map<int32_t, std::set<int32_t>> regionToSubregions;
 
   // Helper functions
-  bool isValidCarType(const std::string &type)
-  {
+  bool isValidCarType(const std::string &type) {
     return type == "small" || type == "sports" || type == "luxury" ||
            type == "family";
   }
 
   void processRegion(const crow::json::rvalue &region,
-                     std::unordered_map<int32_t, std::set<int32_t>> &regions)
-  {
+                     std::unordered_map<int32_t, std::set<int32_t>> &regions) {
     int32_t regionId = region["id"].i();
 
-    if (region.has("subregions"))
-    {
-      for (const auto &subregion : region["subregions"])
-      {
+    if (region.has("subregions")) {
+      for (const auto &subregion : region["subregions"]) {
         int32_t subregionId = subregion["id"].i();
         regions[regionId].insert(subregionId);
 
@@ -214,8 +188,7 @@ calculateFreeKilometerRanges(const std::vector<Offer> offers,
         processRegion(subregion, regions);
 
         // Add all subregions of the subregion to the current region
-        if (regions.count(subregionId))
-        {
+        if (regions.count(subregionId)) {
           regions[regionId].insert(regions[subregionId].begin(),
                                    regions[subregionId].end());
         }
@@ -223,11 +196,9 @@ calculateFreeKilometerRanges(const std::vector<Offer> offers,
     }
   }
 
-  void loadRegions()
-  {
+  void loadRegions() {
     std::ifstream f("regions.json");
-    if (!f.is_open())
-    {
+    if (!f.is_open()) {
       throw std::runtime_error("Could not open regions.json");
     }
 
@@ -235,22 +206,17 @@ calculateFreeKilometerRanges(const std::vector<Offer> offers,
                         std::istreambuf_iterator<char>());
 
     auto data = crow::json::load(content);
-    if (!data)
-    {
+    if (!data) {
       throw std::runtime_error("Failed to parse regions.json");
     }
 
     processRegion(data, regionToSubregions);
   }
 
-  int main()
-  {
-    try
-    {
+  int main() {
+    try {
       loadRegions();
-    }
-    catch (const std::exception &e)
-    {
+    } catch (const std::exception &e) {
       std::cerr << "Failed to load regions: " << e.what() << std::endl;
       return 1;
     }
@@ -259,268 +225,272 @@ calculateFreeKilometerRanges(const std::vector<Offer> offers,
 
     // POST /api/offers - Create new offers
     CROW_ROUTE(app, "/api/offers")
-        .methods(
-            "POST"_method)([](const crow::request &req, crow::response &res)
-                           {
-        auto json = crow::json::load(req.body);
-        if (!json) {
-          res.code = 400;
-          res.write("Invalid JSON");
-          res.end();
-          return;
-        }
+        .methods("POST"_method)(
+            [](const crow::request &req, crow::response &res) {
+              auto json = crow::json::load(req.body);
+              if (!json) {
+                res.code = 400;
+                res.write("Invalid JSON");
+                res.end();
+                return;
+              }
 
-        if (!json.has("offers")) {
-          res.code = 400;
-          res.write("Missing offers array");
-          res.end();
-          return;
-        }
+              if (!json.has("offers")) {
+                res.code = 400;
+                res.write("Missing offers array");
+                res.end();
+                return;
+              }
 
-        std::vector<Offer> newOffers;
-        for (const auto &offerJson : json["offers"]) {
-          Offer offer;
-          try {
-            offer.id = offerJson["ID"].s();
-            offer.data = offerJson["data"].s();
-            offer.mostSpecificRegionID = offerJson["mostSpecificRegionID"].i();
-            offer.startDate = offerJson["startDate"].i();
-            offer.endDate = offerJson["endDate"].i();
-            offer.numberSeats = offerJson["numberSeats"].i();
-            offer.price = offerJson["price"].i();
-            offer.carType = offerJson["carType"].s();
-            offer.hasVollkasko = offerJson["hasVollkasko"].b();
-            offer.freeKilometers = offerJson["freeKilometers"].i();
+              std::vector<Offer> newOffers;
+              for (const auto &offerJson : json["offers"]) {
+                Offer offer;
+                try {
+                  offer.id = offerJson["ID"].s();
+                  offer.data = offerJson["data"].s();
+                  offer.mostSpecificRegionID =
+                      offerJson["mostSpecificRegionID"].i();
+                  offer.startDate = offerJson["startDate"].i();
+                  offer.endDate = offerJson["endDate"].i();
+                  offer.numberSeats = offerJson["numberSeats"].i();
+                  offer.price = offerJson["price"].i();
+                  offer.carType = offerJson["carType"].s();
+                  offer.hasVollkasko = offerJson["hasVollkasko"].b();
+                  offer.freeKilometers = offerJson["freeKilometers"].i();
 
-            if (!isValidCarType(offer.carType)) {
-              res.code = 400;
-              res.write("Invalid car type");
+                  if (!isValidCarType(offer.carType)) {
+                    res.code = 400;
+                    res.write("Invalid car type");
+                    res.end();
+                    return;
+                  }
+
+                  newOffers.push_back(offer);
+                } catch (const std::exception &e) {
+                  res.code = 400;
+                  res.write("Invalid offer data");
+                  res.end();
+                  return;
+                }
+              }
+
+              // Add offers to storage
+              {
+                std::lock_guard<std::mutex> lock(offers_mutex);
+                offers.insert(offers.end(), newOffers.begin(), newOffers.end());
+              }
+
+              std::cout << "now stored offers\n";
+              for (Offer &o : offers) {
+                std::cout << o.id << ", ";
+              }
+              std::cout << "\n";
+
+              res.code = 200;
               res.end();
-              return;
-            }
-
-            newOffers.push_back(offer);
-          } catch (const std::exception &e) {
-            res.code = 400;
-            res.write("Invalid offer data");
-            res.end();
-            return;
-          }
-        }
-
-        // Add offers to storage
-        {
-          std::lock_guard<std::mutex> lock(offers_mutex);
-          offers.insert(offers.end(), newOffers.begin(), newOffers.end());
-        }
-
-        std::cout << "now stored offers\n";
-        for (Offer &o : offers) {
-          std::cout << o.id << ", ";
-        }
-        std::cout << "\n";
-
-        res.code = 200;
-        res.end(); });
+            });
 
     // GET /api/offers - Search offers
     CROW_ROUTE(app, "/api/offers")
-        .methods("GET"_method)([](const crow::request &req, crow::response &res)
-                               {
-        try {
-          // Parse mandatory parameters
-          int32_t regionID = std::stoi(req.url_params.get("regionID"));
-          int64_t timeRangeStart =
-              std::stoll(req.url_params.get("timeRangeStart"));
-          int64_t timeRangeEnd = std::stoll(req.url_params.get("timeRangeEnd"));
-          uint16_t numberDays = std::stoi(req.url_params.get("numberDays"));
-          std::string sortOrder = req.url_params.get("sortOrder");
-          uint32_t page = std::stoul(req.url_params.get("page"));
-          uint32_t pageSize = std::stoul(req.url_params.get("pageSize"));
-          uint32_t priceRangeWidth =
-              std::stoul(req.url_params.get("priceRangeWidth"));
-          uint32_t minFreeKilometerWidth =
-              std::stoul(req.url_params.get("minFreeKilometerWidth"));
+        .methods("GET"_method)([](const crow::request &req) {
+          try {
+            // Parse mandatory parameters
+            int32_t regionID = std::stoi(req.url_params.get("regionID"));
+            int64_t timeRangeStart =
+                std::stoll(req.url_params.get("timeRangeStart"));
+            int64_t timeRangeEnd =
+                std::stoll(req.url_params.get("timeRangeEnd"));
+            uint16_t numberDays = std::stoi(req.url_params.get("numberDays"));
+            std::string sortOrder = req.url_params.get("sortOrder");
+            uint32_t page = std::stoul(req.url_params.get("page"));
+            uint32_t pageSize = std::stoul(req.url_params.get("pageSize"));
+            uint32_t priceRangeWidth =
+                std::stoul(req.url_params.get("priceRangeWidth"));
+            uint32_t minFreeKilometerWidth =
+                std::stoul(req.url_params.get("minFreeKilometerWidth"));
 
-          // Parse optional parameters
-          std::optional<uint8_t> minNumberSeats;
-          if (req.url_params.get("minNumberSeats") != nullptr) {
-            minNumberSeats = std::stoi(req.url_params.get("minNumberSeats"));
-          }
-
-          std::optional<uint16_t> minPrice;
-          if (req.url_params.get("minPrice") != nullptr) {
-            minPrice = std::stoi(req.url_params.get("minPrice"));
-          }
-
-          std::optional<uint16_t> maxPrice;
-          if (req.url_params.get("maxPrice") != nullptr) {
-            maxPrice = std::stoi(req.url_params.get("maxPrice"));
-          }
-
-          std::optional<std::string> carType;
-          if (req.url_params.get("carType") != nullptr) {
-            carType = req.url_params.get("carType");
-          }
-
-          std::optional<bool> onlyVollkasko;
-          if (req.url_params.get("onlyVollkasko") != nullptr) {
-            onlyVollkasko = req.url_params.get("onlyVollkasko") == "true";
-          }
-
-          std::optional<uint16_t> minFreeKilometer;
-          if (req.url_params.get("minFreeKilometer") != nullptr) {
-            minFreeKilometer =
-                std::stoi(req.url_params.get("minFreeKilometer"));
-          }
-
-          // Filter offers based on parameters
-          std::vector<Offer> filteredOffers;
-          {
-            std::lock_guard<std::mutex> lock(offers_mutex);
-
-            auto validRegions = regionToSubregions[regionID];
-            validRegions.insert(regionID); // include the region itself
-
-            for (const auto &offer : offers) {
-              // Check region
-              if (validRegions.count(offer.mostSpecificRegionID) == 0) {
-                continue;
-              }
-
-              // Apply mandatory filters
-              // if (offer.startDate <= timeRangeStart ||
-              //     offer.endDate >= timeRangeEnd) {
-              //   continue;
-              // }
-
-              // TODO: is this correct?
-              // check number of days
-              // int64_t daysAvailable =
-              //     (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              // if (daysAvailable != numberDays) {
-              //   continue;
-              // }
-
-              // Apply optional filters
-              // if (minNumberSeats && offer.numberSeats < *minNumberSeats)
-              //   continue;
-              // if (minPrice && offer.price < *minPrice)
-              //   continue;
-              // if (maxPrice && offer.price >= *maxPrice)
-              //   continue;
-              // if (carType && offer.carType != *carType)
-              //   continue;
-              // if (onlyVollkasko && !offer.hasVollkasko)
-              //   continue;
-              // if (minFreeKilometer && offer.freeKilometers <
-              // *minFreeKilometer)
-              //   continue;
-
-              filteredOffers.push_back(offer);
+            // Parse optional parameters
+            std::optional<uint8_t> minNumberSeats;
+            if (req.url_params.get("minNumberSeats") != nullptr) {
+              minNumberSeats = std::stoi(req.url_params.get("minNumberSeats"));
             }
+
+            std::optional<uint16_t> minPrice;
+            if (req.url_params.get("minPrice") != nullptr) {
+              minPrice = std::stoi(req.url_params.get("minPrice"));
+            }
+
+            std::optional<uint16_t> maxPrice;
+            if (req.url_params.get("maxPrice") != nullptr) {
+              maxPrice = std::stoi(req.url_params.get("maxPrice"));
+            }
+
+            std::optional<std::string> carType;
+            if (req.url_params.get("carType") != nullptr) {
+              carType = req.url_params.get("carType");
+            }
+
+            std::optional<bool> onlyVollkasko;
+            if (req.url_params.get("onlyVollkasko") != nullptr) {
+              onlyVollkasko = req.url_params.get("onlyVollkasko") == "true";
+            }
+
+            std::optional<uint16_t> minFreeKilometer;
+            if (req.url_params.get("minFreeKilometer") != nullptr) {
+              minFreeKilometer =
+                  std::stoi(req.url_params.get("minFreeKilometer"));
+            }
+
+            // Filter offers based on parameters
+            std::vector<Offer> filteredOffers;
+            {
+              std::lock_guard<std::mutex> lock(offers_mutex);
+
+              auto validRegions = regionToSubregions[regionID];
+              validRegions.insert(regionID); // include the region itself
+
+              for (const auto &offer : offers) {
+                // Check region
+                if (validRegions.count(offer.mostSpecificRegionID) == 0) {
+                  continue;
+                }
+
+                // Apply mandatory filters
+                if (offer.startDate < timeRangeStart ||
+                    offer.endDate > timeRangeEnd) {
+                  continue;
+                }
+
+                // TODO: is this correct?
+                // check number of days
+                int64_t daysAvailable =
+                    (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
+                if (daysAvailable != numberDays) {
+                  continue;
+                }
+
+                // Apply optional filters
+                if (minNumberSeats && offer.numberSeats < *minNumberSeats)
+                  continue;
+                if (minPrice && offer.price < *minPrice)
+                  continue;
+                if (maxPrice && offer.price >= *maxPrice)
+                  continue;
+                if (carType && offer.carType != *carType)
+                  continue;
+                if (onlyVollkasko && !offer.hasVollkasko)
+                  continue;
+                if (minFreeKilometer &&
+                    offer.freeKilometers < *minFreeKilometer)
+                  continue;
+
+                filteredOffers.push_back(offer);
+              }
+            }
+
+            // Sort offers
+            if (sortOrder == "price-asc") {
+              std::sort(filteredOffers.begin(), filteredOffers.end(),
+                        [](const Offer &a, const Offer &b) {
+                          return a.price < b.price ||
+                                 (a.price == b.price && a.id < b.id);
+                        });
+            } else if (sortOrder == "price-desc") {
+              std::sort(filteredOffers.begin(), filteredOffers.end(),
+                        [](const Offer &a, const Offer &b) {
+                          return a.price > b.price ||
+                                 (a.price == b.price && a.id < b.id);
+                        });
+            }
+
+            // Paginate results
+            size_t startIdx = page * pageSize;
+            size_t endIdx =
+                std::min(startIdx + pageSize, filteredOffers.size());
+
+            // Calculate aggregations
+            auto priceRanges =
+                calculatePriceRanges(filteredOffers, priceRangeWidth);
+            auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
+            auto seatsCount = calculateSeatsCount(filteredOffers);
+            auto freeKilometerRanges = calculateFreeKilometerRanges(
+                filteredOffers, minFreeKilometerWidth);
+            auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
+
+            // Prepare response JSON
+            std::vector<crow::json::wvalue> priceRangesJson;
+            for (const auto &range : priceRanges) {
+              crow::json::wvalue rangeJson;
+              rangeJson["start"] = range.start;
+              rangeJson["end"] = range.end;
+              rangeJson["count"] = range.count;
+              priceRangesJson.push_back(std::move(rangeJson));
+            }
+
+            std::vector<crow::json::wvalue> seatsCountJson;
+            for (const auto &sc : seatsCount) {
+              crow::json::wvalue seatsJson;
+              seatsJson["numberSeats"] = sc.numberSeats;
+              seatsJson["count"] = sc.count;
+              seatsCountJson.push_back(std::move(seatsJson));
+            }
+
+            std::vector<crow::json::wvalue> freeKmRangesJson;
+            for (const auto &range : freeKilometerRanges) {
+              crow::json::wvalue rangeJson;
+              rangeJson["start"] = range.start;
+              rangeJson["end"] = range.end;
+              rangeJson["count"] = range.count;
+              freeKmRangesJson.push_back(std::move(rangeJson));
+            }
+
+            // Prepare offers for response
+            std::vector<crow::json::wvalue> resultOffers;
+            for (size_t i = startIdx; i < endIdx; i++) {
+              crow::json::wvalue offerJson;
+              offerJson["ID"] = filteredOffers[i].id;
+              offerJson["data"] = filteredOffers[i].data;
+              resultOffers.push_back(std::move(offerJson));
+            }
+
+            // Construct final response
+            crow::json::wvalue response;
+            response["offers"] = std::move(resultOffers);
+            response["priceRanges"] = std::move(priceRangesJson);
+            response["carTypeCounts"] =
+                crow::json::wvalue({{"small", carTypeCounts.small},
+                                    {"sports", carTypeCounts.sports},
+                                    {"luxury", carTypeCounts.luxury},
+                                    {"family", carTypeCounts.family}});
+            response["seatsCount"] = std::move(seatsCountJson);
+            response["freeKilometerRange"] = std::move(freeKmRangesJson);
+            response["vollkaskoCount"] = crow::json::wvalue(
+                {{"trueCount", vollkaskoCounts.trueCount},
+                 {"falseCount", vollkaskoCounts.falseCount}});
+
+            return crow::response(200, response);
+          } catch (const std::exception &e) {
+            // Create an error response
+            crow::json::wvalue error_response(
+                {{"status", "error"},
+                 {"message", "Invalid parameters"},
+                 {"error", e.what()}});
+
+            // Return error response with status code 400
+            return crow::response(400, error_response);
           }
-
-          // Sort offers
-          if (sortOrder == "price-asc") {
-            std::sort(filteredOffers.begin(), filteredOffers.end(),
-                      [](const Offer &a, const Offer &b) {
-                        return a.price < b.price ||
-                               (a.price == b.price && a.id < b.id);
-                      });
-          } else if (sortOrder == "price-desc") {
-            std::sort(filteredOffers.begin(), filteredOffers.end(),
-                      [](const Offer &a, const Offer &b) {
-                        return a.price > b.price ||
-                               (a.price == b.price && a.id < b.id);
-                      });
-          }
-
-          // Paginate results
-          size_t startIdx = page * pageSize;
-          size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
-
-          // Calculate aggregations
-          auto priceRanges =
-              calculatePriceRanges(filteredOffers, priceRangeWidth);
-          auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
-          auto seatsCount = calculateSeatsCount(filteredOffers);
-          auto freeKilometerRanges = calculateFreeKilometerRanges(
-              filteredOffers, minFreeKilometerWidth);
-          auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
-
-          // Prepare response JSON
-          std::vector<crow::json::wvalue> priceRangesJson;
-          for (const auto &range : priceRanges) {
-            crow::json::wvalue rangeJson;
-            rangeJson["start"] = range.start;
-            rangeJson["end"] = range.end;
-            rangeJson["count"] = range.count;
-            priceRangesJson.push_back(std::move(rangeJson));
-          }
-
-          std::vector<crow::json::wvalue> seatsCountJson;
-          for (const auto &sc : seatsCount) {
-            crow::json::wvalue seatsJson;
-            seatsJson["numberSeats"] = sc.numberSeats;
-            seatsJson["count"] = sc.count;
-            seatsCountJson.push_back(std::move(seatsJson));
-          }
-
-          std::vector<crow::json::wvalue> freeKmRangesJson;
-          for (const auto &range : freeKilometerRanges) {
-            crow::json::wvalue rangeJson;
-            rangeJson["start"] = range.start;
-            rangeJson["end"] = range.end;
-            rangeJson["count"] = range.count;
-            freeKmRangesJson.push_back(std::move(rangeJson));
-          }
-
-          // Prepare offers for response
-          std::vector<crow::json::wvalue> resultOffers;
-          for (size_t i = startIdx; i < endIdx; i++) {
-            crow::json::wvalue offerJson;
-            offerJson["ID"] = filteredOffers[i].id;
-            offerJson["data"] = filteredOffers[i].data;
-            resultOffers.push_back(std::move(offerJson));
-          }
-
-          // Construct final response
-          crow::json::wvalue response;
-          response["offers"] = std::move(resultOffers);
-          response["priceRanges"] = std::move(priceRangesJson);
-          response["carTypeCounts"] =
-              crow::json::wvalue({{"small", carTypeCounts.small},
-                                  {"sports", carTypeCounts.sports},
-                                  {"luxury", carTypeCounts.luxury},
-                                  {"family", carTypeCounts.family}});
-          response["seatsCount"] = std::move(seatsCountJson);
-          response["freeKilometerRange"] = std::move(freeKmRangesJson);
-          response["vollkaskoCount"] =
-              crow::json::wvalue({{"trueCount", vollkaskoCounts.trueCount},
-                                  {"falseCount", vollkaskoCounts.falseCount}});
-
-          res.write(response.dump());
-          res.end();
-
-        } catch (const std::exception &e) {
-          res.code = 400;
-          res.write("Invalid parameters");
-          res.end();
-        } });
+        });
 
     // DELETE /api/offers - Delete all offers
     CROW_ROUTE(app, "/api/offers")
         .methods("DELETE"_method)(
-            [](const crow::request &req, crow::response &res)
-            {
+            [](const crow::request &req, crow::response &res) {
               std::lock_guard<std::mutex> lock(offers_mutex);
               offers.clear();
               res.code = 200;
               res.end();
             });
 
-    // TODO:
     app.port(80).multithreaded().run();
 
     return 0;
