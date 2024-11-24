@@ -397,49 +397,55 @@ int main() {
               }
 
               // Apply mandatory filters
-              // First check if offer overlaps with the requested time range at all
-              // First check if the offer duration exactly matches the requested duration
-              int64_t offerDurationDays =
+              // Check if offer duration matches exactly numberDays
+              int64_t offerDuration =
                   (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
-              if (offerDurationDays != numberDays) {
+              if (offerDuration != numberDays) {
                 continue;
               }
 
-              // Then check if the offer period is completely contained within the search range
-              if (offer.startDate < timeRangeStart || offer.endDate > timeRangeEnd) {
+              // Check if offer falls completely within the time range
+              // (no undershoot/overshoot allowed)
+              if (offer.startDate < timeRangeStart ||
+                  offer.endDate > timeRangeEnd) {
                 continue;
               }
 
               // Common filters for all vectors
-              bool passesMinNumberSeats = !(minNumberSeats && offer.numberSeats < *minNumberSeats);
-              bool passesOnlyVollkasko = !(onlyVollkasko && !offer.hasVollkasko);
+              bool passesMinNumberSeats =
+                  !(minNumberSeats && offer.numberSeats < *minNumberSeats);
+              bool passesOnlyVollkasko =
+                  !(onlyVollkasko && !offer.hasVollkasko);
 
               // General filter including all criteria
               if (passesMinNumberSeats && passesOnlyVollkasko &&
                   (!minPrice || offer.price >= *minPrice) &&
                   (!maxPrice || offer.price < *maxPrice) &&
                   (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                  (!minFreeKilometer ||
+                   offer.freeKilometers >= *minFreeKilometer)) {
                 filteredOffers.push_back(offer);
               }
 
               // Filter excluding price
-              if (passesMinNumberSeats && passesOnlyVollkasko && 
+              if (passesMinNumberSeats && passesOnlyVollkasko &&
                   (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                  (!minFreeKilometer ||
+                   offer.freeKilometers >= *minFreeKilometer)) {
                 filteredOffersExceptPrice.push_back(offer);
               }
 
               // Filter excluding carType
-              if (passesMinNumberSeats && passesOnlyVollkasko && 
+              if (passesMinNumberSeats && passesOnlyVollkasko &&
                   (!minPrice || offer.price >= *minPrice) &&
                   (!maxPrice || offer.price < *maxPrice) &&
-                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                  (!minFreeKilometer ||
+                   offer.freeKilometers >= *minFreeKilometer)) {
                 filteredOffersExceptCarType.push_back(offer);
               }
 
               // Filter excluding freeKilometers
-              if (passesMinNumberSeats && passesOnlyVollkasko && 
+              if (passesMinNumberSeats && passesOnlyVollkasko &&
                   (!minPrice || offer.price >= *minPrice) &&
                   (!maxPrice || offer.price < *maxPrice) &&
                   (!carType || offer.carType == *carType)) {
@@ -448,7 +454,6 @@ int main() {
             }
           }
 
-          
           // Sort offers
           if (sortOrder == "price-asc") {
             std::sort(filteredOffers.begin(), filteredOffers.end(),
@@ -465,15 +470,16 @@ int main() {
           }
           cout << "we ball" << endl;
 
-
           // Calculate aggregations
           auto priceRanges = calculatePriceRanges(
               filteredOffersExceptPrice, priceRangeWidth, minPrice, maxPrice);
           cout << "baller" << endl;
-          auto carTypeCounts = calculateCarTypeCounts(filteredOffersExceptCarType);
+          auto carTypeCounts =
+              calculateCarTypeCounts(filteredOffersExceptCarType);
           auto seatsCount = calculateSeatsCount(filteredOffers);
           auto freeKilometerRanges = calculateFreeKilometerRanges(
-              filteredOffersExceptFreeKilometers, minFreeKilometerWidth, minFreeKilometer);
+              filteredOffersExceptFreeKilometers, minFreeKilometerWidth,
+              minFreeKilometer);
           auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
 
           cout << "we ball even harder" << endl;
