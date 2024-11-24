@@ -303,6 +303,7 @@ int main() {
   CROW_ROUTE(app, "/api/offers")
       .methods("GET"_method)([](const crow::request &req) {
         try {
+
           // Parse mandatory parameters
           int32_t regionID = std::stoi(req.url_params.get("regionID"));
           int64_t timeRangeStart =
@@ -335,10 +336,16 @@ int main() {
           if (req.url_params.get("minPrice") != nullptr) {
             minPrice = std::stoi(req.url_params.get("minPrice"));
           }
+          else{
+            minPrice = 0;
+          }
 
           std::optional<uint16_t> maxPrice;
           if (req.url_params.get("maxPrice") != nullptr) {
             maxPrice = std::stoi(req.url_params.get("maxPrice"));
+          }
+          else{
+            maxPrice = UINT16_MAX;
           }
 
           std::optional<std::string> carType;
@@ -411,20 +418,23 @@ int main() {
                                (a.price == b.price && a.id < b.id);
                       });
           }
+          cout << "we ball" << endl;
 
           // Paginate results
           size_t startIdx = page * pageSize;
           size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
 
           // Calculate aggregations
-          auto priceRanges =
-              calculatePriceRanges(filteredOffers, priceRangeWidth,
-                                   minPrice.value(), maxPrice.value());
+          auto priceRanges = calculatePriceRanges(filteredOffers, priceRangeWidth,
+                                        minPrice.value(), maxPrice.value());
+          cout << "baller" << endl;
           auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
           auto seatsCount = calculateSeatsCount(filteredOffers);
           auto freeKilometerRanges = calculateFreeKilometerRanges(
               filteredOffers, minFreeKilometerWidth, minFreeKilometer.value());
           auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
+
+          cout << "we ball even harder" << endl;
 
           // Prepare response JSON
           std::vector<crow::json::wvalue> priceRangesJson;
