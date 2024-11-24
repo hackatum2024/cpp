@@ -8,7 +8,8 @@
 #include <vector>
 
 // Data structures
-struct Offer {
+struct Offer
+{
   std::string id;
   std::string data;
   int32_t mostSpecificRegionID;
@@ -21,30 +22,35 @@ struct Offer {
   uint16_t freeKilometers;
 };
 
-struct PriceRange {
+struct PriceRange
+{
   uint16_t start;
   uint16_t end;
   uint32_t count;
 };
 
-struct CarTypeCount {
+struct CarTypeCount
+{
   uint32_t small;
   uint32_t sports;
   uint32_t luxury;
   uint32_t family;
 };
 
-struct VollkaskoCount {
+struct VollkaskoCount
+{
   uint32_t trueCount;
   uint32_t falseCount;
 };
 
-struct SeatsCount {
+struct SeatsCount
+{
   uint8_t numberSeats;
   uint32_t count;
 };
 
-struct FreeKilometerRange {
+struct FreeKilometerRange
+{
   uint16_t start;
   uint16_t end;
   uint32_t count;
@@ -52,49 +58,45 @@ struct FreeKilometerRange {
 
 // Helper functions for aggregations
 std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
-                                             uint32_t priceRangeWidth) {
-  if (offers.empty() || priceRangeWidth == 0) {
-    return {};
+                                             uint32_t priceRangeWidth, uint32_t minPrice, uint32_t maxPrice)
+{
+  if (offers.empty() || priceRangeWidth == 0)
+  {
+    return {[]};
   }
 
-  // Find min and max prices
-  auto [minIt, maxIt] = std::minmax_element(
-      offers.begin(), offers.end(),
-      [](const Offer &a, const Offer &b) { return a.price < b.price; });
-
-  uint16_t minPrice = minIt->price;
-  uint16_t maxPrice = maxIt->price;
-
-  // Calculate number of ranges needed
-  size_t numRanges =
-      (maxPrice - minPrice + priceRangeWidth - 1) / priceRangeWidth;
-  std::vector<uint32_t> rangeCounts(numRanges, 0);
-
-  // Count offers in each range
-  for (const auto &offer : offers) {
-    size_t rangeIndex = (offer.price - minPrice) / priceRangeWidth;
-    if (rangeIndex < rangeCounts.size()) {
-      rangeCounts[rangeIndex]++;
+  uint32_t maxPriceBasket = minPrice + priceRangeWidth;
+  uint32_t i = 0;
+  vector<PriceRange> ranges;
+  while (maxPriceBasket <= maxPrice)
+  {
+    uint32_t count = 0;
+    uint32_t min_in_basket = INT_MAX;
+    uint32_t max_in_basket = 0;
+    while (offers[i].price < maxPriceBasket)
+    {
+      count++;
+      min_in_basket = min(min_in_basket, offers[i].price);
+      max_in_basket = max(max_in_basket, offers[i].price);
+      i++;
     }
-  }
-
-  // Create PriceRange objects for non-empty ranges
-  std::vector<PriceRange> result;
-  for (size_t i = 0; i < rangeCounts.size(); i++) {
-    if (rangeCounts[i] > 0) {
-      uint16_t start = minPrice + i * priceRangeWidth;
-      uint16_t end = start + priceRangeWidth;
-      result.push_back({start, end, rangeCounts[i]});
+    if (count == 0)
+    {
+      continue;
     }
+    PriceRange range = {min_in_basket, max_in_basket, count};
+    ranges.push_back(range);
+    maxPriceBasket += priceRangeWidth;
   }
-
-  return result;
+  return ranges;
 }
 
-CarTypeCount calculateCarTypeCounts(const std::vector<Offer> &offers) {
+CarTypeCount calculateCarTypeCounts(const std::vector<Offer> &offers)
+{
   CarTypeCount counts = {0, 0, 0, 0};
 
-  for (const auto &offer : offers) {
+  for (const auto &offer : offers)
+  {
     if (offer.carType == "small")
       counts.small++;
     else if (offer.carType == "sports")
@@ -108,17 +110,20 @@ CarTypeCount calculateCarTypeCounts(const std::vector<Offer> &offers) {
   return counts;
 }
 
-std::vector<SeatsCount> calculateSeatsCount(const std::vector<Offer> &offers) {
+std::vector<SeatsCount> calculateSeatsCount(const std::vector<Offer> &offers)
+{
   std::map<uint8_t, uint32_t> seatCounts;
 
   // Count offers for each seat number
-  for (const auto &offer : offers) {
+  for (const auto &offer : offers)
+  {
     seatCounts[offer.numberSeats]++;
   }
 
   // Convert to vector of SeatsCount
   std::vector<SeatsCount> result;
-  for (const auto &[seats, count] : seatCounts) {
+  for (const auto &[seats, count] : seatCounts)
+  {
     result.push_back({seats, count});
   }
 
@@ -126,124 +131,137 @@ std::vector<SeatsCount> calculateSeatsCount(const std::vector<Offer> &offers) {
 }
 
 std::vector<FreeKilometerRange>
-calculateFreeKilometerRanges(const std::vector<Offer> &offers,
-                             uint32_t minFreeKilometerWidth) {
-  if (offers.empty() || minFreeKilometerWidth == 0) {
+calculateFreeKilometerRanges(const std::vector<Offer> offers,
+                             uint32_t minFreeKilometerWidth, uint32_t minFreeKilometer)
+{
+  if (offers.empty() || minFreeKilometerWidth == 0)
+  {
     return {};
   }
 
-  // Find min and max free kilometers
-  auto [minIt, maxIt] = std::minmax_element(
-      offers.begin(), offers.end(), [](const Offer &a, const Offer &b) {
-        return a.freeKilometers < b.freeKilometers;
-      });
-
-  uint16_t minKm = minIt->freeKilometers;
-  uint16_t maxKm = maxIt->freeKilometers;
-
-  // Calculate number of ranges needed
-  size_t numRanges =
-      (maxKm - minKm + minFreeKilometerWidth - 1) / minFreeKilometerWidth;
-  std::vector<uint32_t> rangeCounts(numRanges, 0);
-
-  // Count offers in each range
-  for (const auto &offer : offers) {
-    size_t rangeIndex = (offer.freeKilometers - minKm) / minFreeKilometerWidth;
-    if (rangeIndex < rangeCounts.size()) {
-      rangeCounts[rangeIndex]++;
+  vector<FreeKilometerRange> ranges;
+  // sort the offers by freeKilometers
+  sort(offers.begin(), offers.end(), [](const Offer &a, const Offer &b)
+       { return a.freeKilometers < b.freeKilometers; });
+  uint32_t bucket_max = minFreeKilometer + minFreeKilometerWidth;
+  Offer start = offers[0];
+  uint32_t i = 0;
+  while (i < offers.size())
+  {
+    uint32_t count = 0;
+    uint32_t max_in_bucket = 0;
+    uint32_t min_in_bucket = INT_MAX;
+    while (offers[i].freeKilometers < bucket_max)
+    {
+      count++;
+      max_in_bucket = max(max_in_bucket, offers[i].freeKilometers);
+      min_in_bucket = min(min_in_bucket, offers[i].freeKilometers);
+      i++;
     }
+    if (count == 0)
+    {
+      continue;
+    }
+    FreeKilometerRange range = {min_in_bucket, max_in_bucket, count};
+    ranges.push_back(range);
+    bucket_max += minFreeKilometerWidth;
   }
 
-  // Create FreeKilometerRange objects for non-empty ranges
-  std::vector<FreeKilometerRange> result;
-  for (size_t i = 0; i < rangeCounts.size(); i++) {
-    if (rangeCounts[i] > 0) {
-      uint16_t start = minKm + i * minFreeKilometerWidth;
-      uint16_t end = start + minFreeKilometerWidth;
-      result.push_back({start, end, rangeCounts[i]});
+  VollkaskoCount calculateVollkaskoCounts(const std::vector<Offer> &offers)
+  {
+    VollkaskoCount counts = {0, 0};
+
+    for (const auto &offer : offers)
+    {
+      if (offer.hasVollkasko)
+      {
+        counts.trueCount++;
+      }
+      else
+      {
+        counts.falseCount++;
+      }
     }
+
+    return counts;
   }
 
-  return result;
-}
+  // Global storage
+  std::vector<Offer> offers;
+  std::mutex offers_mutex;
+  std::unordered_map<int32_t, std::set<int32_t>> regionToSubregions;
 
-VollkaskoCount calculateVollkaskoCounts(const std::vector<Offer> &offers) {
-  VollkaskoCount counts = {0, 0};
-
-  for (const auto &offer : offers) {
-    if (offer.hasVollkasko) {
-      counts.trueCount++;
-    } else {
-      counts.falseCount++;
-    }
+  // Helper functions
+  bool isValidCarType(const std::string &type)
+  {
+    return type == "small" || type == "sports" || type == "luxury" ||
+           type == "family";
   }
 
-  return counts;
-}
+  void processRegion(const crow::json::rvalue &region,
+                     std::unordered_map<int32_t, std::set<int32_t>> &regions)
+  {
+    int32_t regionId = region["id"].i();
 
-// Global storage
-std::vector<Offer> offers;
-std::mutex offers_mutex;
-std::unordered_map<int32_t, std::set<int32_t>> regionToSubregions;
+    if (region.has("subregions"))
+    {
+      for (const auto &subregion : region["subregions"])
+      {
+        int32_t subregionId = subregion["id"].i();
+        regions[regionId].insert(subregionId);
 
-// Helper functions
-bool isValidCarType(const std::string &type) {
-  return type == "small" || type == "sports" || type == "luxury" ||
-         type == "family";
-}
+        // Process subregion recursively
+        processRegion(subregion, regions);
 
-void processRegion(const crow::json::rvalue &region,
-                   std::unordered_map<int32_t, std::set<int32_t>> &regions) {
-  int32_t regionId = region["id"].i();
-
-  if (region.has("subregions")) {
-    for (const auto &subregion : region["subregions"]) {
-      int32_t subregionId = subregion["id"].i();
-      regions[regionId].insert(subregionId);
-
-      // Process subregion recursively
-      processRegion(subregion, regions);
-
-      // Add all subregions of the subregion to the current region
-      if (regions.count(subregionId)) {
-        regions[regionId].insert(regions[subregionId].begin(),
-                                 regions[subregionId].end());
+        // Add all subregions of the subregion to the current region
+        if (regions.count(subregionId))
+        {
+          regions[regionId].insert(regions[subregionId].begin(),
+                                   regions[subregionId].end());
+        }
       }
     }
   }
-}
 
-void loadRegions() {
-  std::ifstream f("regions.json");
-  if (!f.is_open()) {
-    throw std::runtime_error("Could not open regions.json");
+  void loadRegions()
+  {
+    std::ifstream f("regions.json");
+    if (!f.is_open())
+    {
+      throw std::runtime_error("Could not open regions.json");
+    }
+
+    std::string content((std::istreambuf_iterator<char>(f)),
+                        std::istreambuf_iterator<char>());
+
+    auto data = crow::json::load(content);
+    if (!data)
+    {
+      throw std::runtime_error("Failed to parse regions.json");
+    }
+
+    processRegion(data, regionToSubregions);
   }
 
-  std::string content((std::istreambuf_iterator<char>(f)),
-                      std::istreambuf_iterator<char>());
+  int main()
+  {
+    try
+    {
+      loadRegions();
+    }
+    catch (const std::exception &e)
+    {
+      std::cerr << "Failed to load regions: " << e.what() << std::endl;
+      return 1;
+    }
 
-  auto data = crow::json::load(content);
-  if (!data) {
-    throw std::runtime_error("Failed to parse regions.json");
-  }
+    crow::SimpleApp app;
 
-  processRegion(data, regionToSubregions);
-}
-
-int main() {
-  try {
-    loadRegions();
-  } catch (const std::exception &e) {
-    std::cerr << "Failed to load regions: " << e.what() << std::endl;
-    return 1;
-  }
-
-  crow::SimpleApp app;
-
-  // POST /api/offers - Create new offers
-  CROW_ROUTE(app, "/api/offers")
-      .methods(
-          "POST"_method)([](const crow::request &req, crow::response &res) {
+    // POST /api/offers - Create new offers
+    CROW_ROUTE(app, "/api/offers")
+        .methods(
+            "POST"_method)([](const crow::request &req, crow::response &res)
+                           {
         auto json = crow::json::load(req.body);
         if (!json) {
           res.code = 400;
@@ -303,12 +321,12 @@ int main() {
         std::cout << "\n";
 
         res.code = 200;
-        res.end();
-      });
+        res.end(); });
 
-  // GET /api/offers - Search offers
-  CROW_ROUTE(app, "/api/offers")
-      .methods("GET"_method)([](const crow::request &req, crow::response &res) {
+    // GET /api/offers - Search offers
+    CROW_ROUTE(app, "/api/offers")
+        .methods("GET"_method)([](const crow::request &req, crow::response &res)
+                               {
         try {
           // Parse mandatory parameters
           int32_t regionID = std::stoi(req.url_params.get("regionID"));
@@ -489,21 +507,21 @@ int main() {
           res.code = 400;
           res.write("Invalid parameters");
           res.end();
-        }
-      });
+        } });
 
-  // DELETE /api/offers - Delete all offers
-  CROW_ROUTE(app, "/api/offers")
-      .methods("DELETE"_method)(
-          [](const crow::request &req, crow::response &res) {
-            std::lock_guard<std::mutex> lock(offers_mutex);
-            offers.clear();
-            res.code = 200;
-            res.end();
-          });
+    // DELETE /api/offers - Delete all offers
+    CROW_ROUTE(app, "/api/offers")
+        .methods("DELETE"_method)(
+            [](const crow::request &req, crow::response &res)
+            {
+              std::lock_guard<std::mutex> lock(offers_mutex);
+              offers.clear();
+              res.code = 200;
+              res.end();
+            });
 
-  // TODO:
-  app.port(80).multithreaded().run();
+    // TODO:
+    app.port(80).multithreaded().run();
 
-  return 0;
-}
+    return 0;
+  }
