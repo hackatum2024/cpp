@@ -62,6 +62,9 @@ std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
     return {};
   }
 
+  vector<Offer> sortedOffers(offers);
+  sort(sortedOffers.begin(), sortedOffers.end(),
+       [](const Offer &a, const Offer &b) { return a.price < b.price; });
   // Create a map to store counts for each bucket
   std::map<uint16_t, uint32_t> bucketCounts;
 
@@ -70,7 +73,7 @@ std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
   uint16_t actualMaxPrice = 0;
 
   // Count offers in each bucket and track min/max prices
-  for (const auto &offer : offers) {
+  for (const auto &offer : sortedOffers) {
     // Skip if outside optional price range filters
     if (minPrice && offer.price < *minPrice)
       continue;
@@ -148,11 +151,18 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
     return {};
   }
 
+  // Sort offers by free kilometers
+  std::vector<Offer> sortedOffers(offers);
+  std::sort(sortedOffers.begin(), sortedOffers.end(),
+            [](const Offer &a, const Offer &b) {
+              return a.freeKilometers < b.freeKilometers;
+            });
+
   // Create map to count offers in each bucket
   std::map<uint16_t, uint32_t> bucketCounts;
 
   // Calculate bucket start for each offer and count
-  for (const auto &offer : offers) {
+  for (const auto &offer : sortedOffers) {
     // Skip offers below minFreeKilometer if specified
     if (minFreeKilometer && offer.freeKilometers < *minFreeKilometer) {
       continue;
