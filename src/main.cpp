@@ -62,38 +62,46 @@ std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
     return {};
   }
 
-  vector<Offer> sortedOffers(offers);
-  sort(sortedOffers.begin(), sortedOffers.end(),
-       [](const Offer &a, const Offer &b) { return a.price < b.price; });
+  // Create a map to store counts for each bucket
+  std::map<uint16_t, uint32_t> bucketCounts;
 
-  uint16_t minPriceUint = minPrice.value_or(sortedOffers[0].price);
-  uint16_t maxPriceUint = maxPrice.value_or(sortedOffers.back().price);
+  // Find actual min and max prices from the offers
+  uint16_t actualMinPrice = UINT16_MAX;
+  uint16_t actualMaxPrice = 0;
 
-  // round down to multiple of priceRangeWidth
-  minPriceUint = minPriceUint - minPriceUint % priceRangeWidth;
-  maxPriceUint = maxPriceUint + maxPriceUint % priceRangeWidth;
+  // Count offers in each bucket and track min/max prices
+  for (const auto &offer : offers) {
+    // Skip if outside optional price range filters
+    if (minPrice && offer.price < *minPrice)
+      continue;
+    if (maxPrice && offer.price >= *maxPrice)
+      continue;
 
-  vector<PriceRange> ranges;
-  uint32_t bucket_max = minPriceUint + priceRangeWidth;
-  uint32_t i = 0;
+    // Calculate bucket start by rounding down to nearest multiple of width
+    uint16_t bucketStart = (offer.price / priceRangeWidth) * priceRangeWidth;
 
-  while (i < sortedOffers.size() && bucket_max <= maxPriceUint) {
-    uint32_t count = 0;
-    uint16_t min_in_bucket = UINT16_MAX;
-    uint16_t max_in_bucket = 0;
+    bucketCounts[bucketStart]++;
 
-    while (i < sortedOffers.size() && sortedOffers[i].price < bucket_max) {
-      count++;
-      min_in_bucket = min(min_in_bucket, sortedOffers[i].price);
-      max_in_bucket = max(max_in_bucket, sortedOffers[i].price);
-      i++;
-    }
-
-    if (count > 0) {
-      ranges.push_back({min_in_bucket, max_in_bucket, count});
-    }
-    bucket_max += priceRangeWidth;
+    actualMinPrice = std::min(actualMinPrice, offer.price);
+    actualMaxPrice = std::max(actualMaxPrice, offer.price);
   }
+
+  // Convert buckets to ranges
+  std::vector<PriceRange> ranges;
+  for (const auto &[bucketStart, count] : bucketCounts) {
+    uint16_t bucketEnd = bucketStart + priceRangeWidth;
+    ranges.push_back({
+        bucketStart, // Start of range
+        bucketEnd,   // End of range
+        count        // Number of offers in this range
+    });
+  }
+
+  // Sort ranges by start price
+  std::sort(ranges.begin(), ranges.end(),
+            [](const PriceRange &a, const PriceRange &b) {
+              return a.start < b.start;
+            });
 
   return ranges;
 }
