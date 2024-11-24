@@ -478,21 +478,14 @@ int main() {
                                (a.price == b.price && a.id < b.id);
                       });
           }
-          cout << "we ball" << endl;
 
           // Calculate aggregations
-          auto priceRanges = calculatePriceRanges(
-              filteredOffersExceptPrice, priceRangeWidth, minPrice, maxPrice);
-          cout << "baller" << endl;
-          auto carTypeCounts =
-              calculateCarTypeCounts(filteredOffersExceptCarType);
+          auto priceRanges = calculatePriceRanges(filteredOffersExceptPrice, priceRangeWidth, minPrice, maxPrice);
+          auto carTypeCounts = calculateCarTypeCounts(filteredOffersExceptCarType);
           auto seatsCount = calculateSeatsCount(filteredOffersExceptSeatsCount);
-          auto freeKilometerRanges = calculateFreeKilometerRanges(
-              filteredOffersExceptFreeKilometers, minFreeKilometerWidth,
-              minFreeKilometer);
+          auto freeKilometerRanges = calculateFreeKilometerRanges(filteredOffersExceptFreeKilometers, minFreeKilometerWidth, minFreeKilometer);
           auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffersExceptVollkasko);
 
-          cout << "we ball even harder" << endl;
           // Paginate results
           size_t startIdx = page * pageSize;
           size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
