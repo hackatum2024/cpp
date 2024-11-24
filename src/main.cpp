@@ -56,16 +56,35 @@ struct FreeKilometerRange {
 // Helper functions for aggregations
 std::vector<PriceRange> calculatePriceRanges(const std::vector<Offer> &offers,
                                              uint32_t priceRangeWidth,
-                                             uint16_t minPrice,
-                                             uint16_t maxPrice) {
+                                             optional<uint16_t> minPrice,
+                                             optional<uint16_t> maxPrice) {
   if (offers.empty() || priceRangeWidth == 0) {
     return {};
+  } 
+
+  uint16_t minPriceUint = 0;
+  if (!minPrice) {
+    for(const auto &offer : offers) {
+      minPriceUint = min(minPrice.value_or(offer.price), offer.price);
+    }
+  }
+  else{
+    minPriceUint = minPrice.value();
   }
 
-  uint32_t maxPriceBasket = minPrice + priceRangeWidth;
+  uint16_t maxPriceUint = 0;
+  if (!maxPrice) {
+    for(const auto &offer : offers) {
+      maxPriceUint = max(maxPrice.value_or(offer.price), offer.price);
+    }
+  }
+  else{
+    maxPriceUint = maxPrice.value();
+  }
+  uint32_t maxPriceBasket = minPriceUint + priceRangeWidth;
   uint32_t i = 0;
   vector<PriceRange> ranges;
-  while (maxPriceBasket <= maxPrice) {
+  while (maxPriceBasket <= maxPriceUint && i < offers.size()) {
     uint32_t count = 0;
     uint16_t min_in_basket = UINT16_MAX;
     uint16_t max_in_basket = 0;
@@ -336,16 +355,10 @@ int main() {
           if (req.url_params.get("minPrice") != nullptr) {
             minPrice = std::stoi(req.url_params.get("minPrice"));
           }
-          else{
-            minPrice = 0;
-          }
 
           std::optional<uint16_t> maxPrice;
           if (req.url_params.get("maxPrice") != nullptr) {
             maxPrice = std::stoi(req.url_params.get("maxPrice"));
-          }
-          else{
-            maxPrice = UINT16_MAX;
           }
 
           std::optional<std::string> carType;
@@ -426,7 +439,7 @@ int main() {
 
           // Calculate aggregations
           auto priceRanges = calculatePriceRanges(filteredOffers, priceRangeWidth,
-                                        minPrice.value(), maxPrice.value());
+                                        minPrice, maxPrice);
           cout << "baller" << endl;
           auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
           auto seatsCount = calculateSeatsCount(filteredOffers);
