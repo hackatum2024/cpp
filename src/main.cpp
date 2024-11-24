@@ -382,7 +382,6 @@ int main() {
           }
 
           // Filter offers based on parameters
-          // Filter offers based on parameters
           std::vector<Offer> filteredOffers;
           std::vector<Offer> filteredOffersExceptPrice;
           std::vector<Offer> filteredOffersExceptCarType;
@@ -416,40 +415,35 @@ int main() {
               }
 
               // Common filters for all vectors
-              bool passesMinNumberSeats =
-                  !(minNumberSeats && offer.numberSeats < *minNumberSeats);
-              bool passesOnlyVollkasko =
-                  !(onlyVollkasko && !offer.hasVollkasko);
+              bool passesMinNumberSeats = !(minNumberSeats && offer.numberSeats < *minNumberSeats);
+              bool passesOnlyVollkasko = !(onlyVollkasko && !offer.hasVollkasko);
 
               // General filter including all criteria
               if (passesMinNumberSeats && passesOnlyVollkasko &&
                   (!minPrice || offer.price >= *minPrice) &&
                   (!maxPrice || offer.price < *maxPrice) &&
                   (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer ||
-                   offer.freeKilometers >= *minFreeKilometer)) {
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
                 filteredOffers.push_back(offer);
               }
 
               // Filter excluding price
-              if (passesMinNumberSeats && passesOnlyVollkasko &&
+              if (passesMinNumberSeats && passesOnlyVollkasko && 
                   (!carType || offer.carType == *carType) &&
-                  (!minFreeKilometer ||
-                   offer.freeKilometers >= *minFreeKilometer)) {
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
                 filteredOffersExceptPrice.push_back(offer);
               }
 
               // Filter excluding carType
-              if (passesMinNumberSeats && passesOnlyVollkasko &&
+              if (passesMinNumberSeats && passesOnlyVollkasko && 
                   (!minPrice || offer.price >= *minPrice) &&
                   (!maxPrice || offer.price < *maxPrice) &&
-                  (!minFreeKilometer ||
-                   offer.freeKilometers >= *minFreeKilometer)) {
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
                 filteredOffersExceptCarType.push_back(offer);
               }
 
               // Filter excluding freeKilometers
-              if (passesMinNumberSeats && passesOnlyVollkasko &&
+              if (passesMinNumberSeats && passesOnlyVollkasko && 
                   (!minPrice || offer.price >= *minPrice) &&
                   (!maxPrice || offer.price < *maxPrice) &&
                   (!carType || offer.carType == *carType)) {
