@@ -444,9 +444,6 @@ int main() {
           }
           cout << "we ball" << endl;
 
-          // Paginate results
-          size_t startIdx = page * pageSize;
-          size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
 
           // Calculate aggregations
           auto priceRanges = calculatePriceRanges(
@@ -459,6 +456,9 @@ int main() {
           auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
 
           cout << "we ball even harder" << endl;
+          // Paginate results
+          size_t startIdx = page * pageSize;
+          size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
 
           // Prepare response JSON
           std::vector<crow::json::wvalue> priceRangesJson;
