@@ -387,10 +387,12 @@ int main() {
           std::vector<Offer> filteredOffersExceptCarType;
           std::vector<Offer> filteredOffersExceptFreeKilometers;
           std::vector<Offer> filteredOffersExceptSeatsCount;
+          std::vector<Offer> filteredOffersExceptVollkasko;
           {
             std::lock_guard<std::mutex> lock(offers_mutex);
 
             auto validRegions = regionToSubregions[regionID];
+            validRegions.insert(regionID); // include the region itself
 
             for (const auto &offer : offers) {
               // Check region
@@ -399,19 +401,8 @@ int main() {
               }
 
               // Apply mandatory filters
-              // Check if offer falls completely within the time range
-              if (offer.startDate < timeRangeStart ||
-                  offer.endDate > timeRangeEnd) {
-                continue;
-              }
-
-              // Convert timestamps to days since epoch and calculate duration
-              const int64_t MS_PER_DAY = 24 * 60 * 60 * 1000;
-              int64_t startDay = offer.startDate / MS_PER_DAY;
-              int64_t endDay = offer.endDate / MS_PER_DAY;
-              int64_t offerDuration = endDay - startDay;
-
-              if (offerDuration != numberDays) {
+              // Check if offer overlaps with the requested time range
+              if (offer.endDate < timeRangeStart || offer.startDate > timeRangeEnd) {
                 continue;
               }
 
@@ -459,8 +450,18 @@ int main() {
                   (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
                 filteredOffersExceptSeatsCount.push_back(offer);
               }
+
+              // Filter excluding vollkasko
+              if (passesMinNumberSeats &&
+                  (!minPrice || offer.price >= *minPrice) &&
+                  (!maxPrice || offer.price < *maxPrice) &&
+                  (!carType || offer.carType == *carType) &&
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                filteredOffersExceptVollkasko.push_back(offer);
+              }
             }
           }
+
 
 
           // Sort offers
