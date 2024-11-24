@@ -168,7 +168,7 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
   uint32_t bucket_max = minFreeKilometerUint + minFreeKilometerWidth;
   Offer start = sortedByFreeKilometers[0];
   uint32_t i = 0;
-  while (i < sortedByFreeKilometers.size()) {
+  while (i < sortedByFreeKilometers.size() && sortedByFreeKilometers[i].freeKilometers < bucket_max) { 
     uint32_t count = 0;
     uint16_t max_in_bucket = 0;
     uint16_t min_in_bucket = UINT16_MAX;
