@@ -399,7 +399,7 @@ int main() {
                   offer.endDate > timeRangeEnd) {
                 continue;
               }
-
+              /*
               // TODO: is this correct?
               // check number of days
               int64_t daysAvailable =
@@ -407,7 +407,7 @@ int main() {
               if (daysAvailable != numberDays) {
                 continue;
               }
-
+              
               // Apply optional filters
               if (minNumberSeats && offer.numberSeats < *minNumberSeats)
                 continue;
@@ -421,7 +421,7 @@ int main() {
                 continue;
               if (minFreeKilometer && offer.freeKilometers < *minFreeKilometer)
                 continue;
-
+*/
               filteredOffers.push_back(offer);
             }
           }
