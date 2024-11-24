@@ -141,11 +141,22 @@ std::vector<SeatsCount> calculateSeatsCount(const std::vector<Offer> &offers) {
 std::vector<FreeKilometerRange>
 calculateFreeKilometerRanges(const std::vector<Offer> &offers,
                              uint32_t minFreeKilometerWidth,
-                             uint16_t minFreeKilometer) {
+                             optional<uint16_t> minFreeKilometer) {
   if (offers.empty() || minFreeKilometerWidth == 0) {
 
     return {};
   }
+
+  uint16_t minFreeKilometerUint = 0;
+  if (!minFreeKilometer) {
+    for(const auto &offer : offers) {
+      minFreeKilometerUint = min(minFreeKilometer.value_or(offer.freeKilometers), offer.freeKilometers);
+    }
+  }
+  else{
+    minFreeKilometerUint = minFreeKilometer.value();
+  }
+
   vector<Offer> sortedByFreeKilometers(offers);
   vector<FreeKilometerRange> ranges;
   // sort the offers by freeKilometers
@@ -154,15 +165,14 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
          return a.freeKilometers < b.freeKilometers;
        });
 
-  uint32_t bucket_max = minFreeKilometer + minFreeKilometerWidth;
+  uint32_t bucket_max = minFreeKilometerUint + minFreeKilometerWidth;
   Offer start = sortedByFreeKilometers[0];
   uint32_t i = 0;
   while (i < sortedByFreeKilometers.size()) {
     uint32_t count = 0;
     uint16_t max_in_bucket = 0;
     uint16_t min_in_bucket = UINT16_MAX;
-    while (sortedByFreeKilometers[i].freeKilometers < bucket_max) {
-
+    while (i < sortedByFreeKilometers.size() && sortedByFreeKilometers[i].freeKilometers < bucket_max) {
       count++;
       max_in_bucket =
           max(max_in_bucket, sortedByFreeKilometers[i].freeKilometers);
@@ -341,8 +351,6 @@ int main() {
           if (req.url_params.get("minFreeKilometer") != nullptr) {
             minFreeKilometer =
                 std::stoi(req.url_params.get("minFreeKilometer"));
-          } else {
-            minFreeKilometer = 0;
           }
 
           // Parse optional parameters
@@ -444,7 +452,7 @@ int main() {
           auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
           auto seatsCount = calculateSeatsCount(filteredOffers);
           auto freeKilometerRanges = calculateFreeKilometerRanges(
-              filteredOffers, minFreeKilometerWidth, minFreeKilometer.value());
+              filteredOffers, minFreeKilometerWidth, minFreeKilometer);
           auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
 
           cout << "we ball even harder" << endl;
