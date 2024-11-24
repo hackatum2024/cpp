@@ -393,9 +393,8 @@ int main() {
               }
 
               // Apply mandatory filters
-              // Check if offer overlaps with the requested time range
-              if (offer.endDate < timeRangeStart ||
-                  offer.startDate > timeRangeEnd) {
+              if (offer.startDate < timeRangeStart ||
+                  offer.endDate > timeRangeEnd) {
                 continue;
               }
 
