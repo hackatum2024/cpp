@@ -485,7 +485,7 @@ int main() {
           cout << "baller" << endl;
           auto carTypeCounts =
               calculateCarTypeCounts(filteredOffersExceptCarType);
-          auto seatsCount = calculateSeatsCount(filteredOffers);
+          auto seatsCount = calculateSeatsCount(filteredOffersExceptSeatsCount);
           auto freeKilometerRanges = calculateFreeKilometerRanges(
               filteredOffersExceptFreeKilometers, minFreeKilometerWidth,
               minFreeKilometer);
