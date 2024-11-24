@@ -60,6 +60,8 @@
         "typeinfo": "cpp",
         "unordered_map": "cpp",
         "variant": "cpp",
-        "algorithm": "cpp"
+        "algorithm": "cpp",
+        "shared_mutex": "cpp",
+        "unordered_set": "cpp"
     }
 }
