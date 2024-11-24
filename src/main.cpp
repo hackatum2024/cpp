@@ -498,7 +498,7 @@ int main() {
           size_t endIdx = std::min(startIdx + pageSize, filteredOffers.size());
 
           // Prepare response JSON
-          std::vector<crow::json::wvalue> priceRangesJson;
+          std::vector<crow::json::value> priceRangesJson;
           for (const auto &range : priceRanges) {
             crow::json::wvalue rangeJson;
             rangeJson["start"] = range.start;
