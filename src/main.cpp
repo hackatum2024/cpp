@@ -395,26 +395,18 @@ int main() {
               // Apply mandatory filters
               // First check if offer overlaps with the requested time range at
               // all
-              if (offer.endDate < timeRangeStart ||
-                  offer.startDate > timeRangeEnd) {
+              // First check if the offer duration exactly matches the requested
+              // duration
+              int64_t offerDurationDays =
+                  (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
+              if (offerDurationDays != numberDays) {
                 continue;
               }
 
-              // Check if the offer has enough consecutive days within the range
-              // The earliest we can start is max(offer.startDate,
-              // timeRangeStart) The latest we can end is min(offer.endDate,
-              // timeRangeEnd)
-              int64_t latestPossibleStart = std::min(
-                  timeRangeEnd - (numberDays * 24 * 60 * 60 * 1000),
-                  std::min(offer.endDate - (numberDays * 24 * 60 * 60 * 1000),
-                           timeRangeEnd));
-              int64_t earliestPossibleStart =
-                  std::max(offer.startDate, timeRangeStart);
-
-              // If the earliest possible start is after the latest possible
-              // start, we can't fit numberDays consecutive days within the
-              // valid range
-              if (earliestPossibleStart > latestPossibleStart) {
+              // Then check if the offer period is completely contained within
+              // the search range
+              if (offer.startDate < timeRangeStart ||
+                  offer.endDate > timeRangeEnd) {
                 continue;
               }
 
