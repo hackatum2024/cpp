@@ -386,6 +386,7 @@ int main() {
           std::vector<Offer> filteredOffersExceptPrice;
           std::vector<Offer> filteredOffersExceptCarType;
           std::vector<Offer> filteredOffersExceptFreeKilometers;
+          std::vector<Offer> filteredOffersExceptSeatsCount;
           {
             std::lock_guard<std::mutex> lock(offers_mutex);
 
@@ -449,8 +450,18 @@ int main() {
                   (!carType || offer.carType == *carType)) {
                 filteredOffersExceptFreeKilometers.push_back(offer);
               }
+
+              // Filter excluding seats count
+              if (passesOnlyVollkasko &&
+                  (!minPrice || offer.price >= *minPrice) &&
+                  (!maxPrice || offer.price < *maxPrice) &&
+                  (!carType || offer.carType == *carType) &&
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                filteredOffersExceptSeatsCount.push_back(offer);
+              }
             }
           }
+
 
           // Sort offers
           if (sortOrder == "price-asc") {
