@@ -379,7 +379,11 @@ int main() {
           }
 
           // Filter offers based on parameters
+          // Filter offers based on parameters
           std::vector<Offer> filteredOffers;
+          std::vector<Offer> filteredOffersExceptPrice;
+          std::vector<Offer> filteredOffersExceptCarType;
+          std::vector<Offer> filteredOffersExceptFreeKilometers;
           {
             std::lock_guard<std::mutex> lock(offers_mutex);
 
@@ -393,41 +397,58 @@ int main() {
               }
 
               // Apply mandatory filters
-              // First check if offer overlaps with the requested time range at
-              // all
-              // First check if the offer duration exactly matches the requested
-              // duration
+              // First check if offer overlaps with the requested time range at all
+              // First check if the offer duration exactly matches the requested duration
               int64_t offerDurationDays =
                   (offer.endDate - offer.startDate) / (24 * 60 * 60 * 1000);
               if (offerDurationDays != numberDays) {
                 continue;
               }
 
-              // Then check if the offer period is completely contained within
-              // the search range
-              if (offer.startDate < timeRangeStart ||
-                  offer.endDate > timeRangeEnd) {
+              // Then check if the offer period is completely contained within the search range
+              if (offer.startDate < timeRangeStart || offer.endDate > timeRangeEnd) {
                 continue;
               }
 
-              // Apply optional filters
-              if (minNumberSeats && offer.numberSeats < *minNumberSeats)
-                continue;
-              if (minPrice && offer.price < *minPrice)
-                continue;
-              if (maxPrice && offer.price >= *maxPrice)
-                continue;
-              if (carType && offer.carType != *carType)
-                continue;
-              if (onlyVollkasko && !offer.hasVollkasko)
-                continue;
-              if (minFreeKilometer && offer.freeKilometers < *minFreeKilometer)
-                continue;
+              // Common filters for all vectors
+              bool passesMinNumberSeats = !(minNumberSeats && offer.numberSeats < *minNumberSeats);
+              bool passesOnlyVollkasko = !(onlyVollkasko && !offer.hasVollkasko);
 
-              filteredOffers.push_back(offer);
+              // General filter including all criteria
+              if (passesMinNumberSeats && passesOnlyVollkasko &&
+                  (!minPrice || offer.price >= *minPrice) &&
+                  (!maxPrice || offer.price < *maxPrice) &&
+                  (!carType || offer.carType == *carType) &&
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                filteredOffers.push_back(offer);
+              }
+
+              // Filter excluding price
+              if (passesMinNumberSeats && passesOnlyVollkasko && 
+                  (!carType || offer.carType == *carType) &&
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                filteredOffersExceptPrice.push_back(offer);
+              }
+
+              // Filter excluding carType
+              if (passesMinNumberSeats && passesOnlyVollkasko && 
+                  (!minPrice || offer.price >= *minPrice) &&
+                  (!maxPrice || offer.price < *maxPrice) &&
+                  (!minFreeKilometer || offer.freeKilometers >= *minFreeKilometer)) {
+                filteredOffersExceptCarType.push_back(offer);
+              }
+
+              // Filter excluding freeKilometers
+              if (passesMinNumberSeats && passesOnlyVollkasko && 
+                  (!minPrice || offer.price >= *minPrice) &&
+                  (!maxPrice || offer.price < *maxPrice) &&
+                  (!carType || offer.carType == *carType)) {
+                filteredOffersExceptFreeKilometers.push_back(offer);
+              }
             }
           }
 
+          
           // Sort offers
           if (sortOrder == "price-asc") {
             std::sort(filteredOffers.begin(), filteredOffers.end(),
@@ -447,12 +468,12 @@ int main() {
 
           // Calculate aggregations
           auto priceRanges = calculatePriceRanges(
-              filteredOffers, priceRangeWidth, minPrice, maxPrice);
+              filteredOffersExceptPrice, priceRangeWidth, minPrice, maxPrice);
           cout << "baller" << endl;
-          auto carTypeCounts = calculateCarTypeCounts(filteredOffers);
+          auto carTypeCounts = calculateCarTypeCounts(filteredOffersExceptCarType);
           auto seatsCount = calculateSeatsCount(filteredOffers);
           auto freeKilometerRanges = calculateFreeKilometerRanges(
-              filteredOffers, minFreeKilometerWidth, minFreeKilometer);
+              filteredOffersExceptFreeKilometers, minFreeKilometerWidth, minFreeKilometer);
           auto vollkaskoCounts = calculateVollkaskoCounts(filteredOffers);
 
           cout << "we ball even harder" << endl;
