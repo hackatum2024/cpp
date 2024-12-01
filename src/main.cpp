@@ -1,4 +1,4 @@
-#include "crow_all.h"
+#include "crow.h"
 #include <algorithm>
 #include <cstdint>
 #include <iostream>
@@ -167,9 +167,10 @@ calculateFreeKilometerRanges(const std::vector<Offer> &offers,
   std::vector<FreeKilometerRange> ranges;
   for (const auto &[bucketStart, count] : bucketCounts) {
     ranges.push_back({
-        bucketStart,                         // Start of range
-        bucketStart + minFreeKilometerWidth, // End of range
-        count                                // Number of offers in this range
+        bucketStart, // Start of range
+        static_cast<uint16_t>(bucketStart +
+                              minFreeKilometerWidth), // End of range
+        count // Number of offers in this range
     });
   }
 
