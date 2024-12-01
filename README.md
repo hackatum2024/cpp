@@ -15,6 +15,8 @@
   xmake run
   ```
 
+## Description
+
 Implementation of a REST API in C++ using Crow.
 The implementation has 3 endpoints:
 
